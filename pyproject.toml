@@ -5,9 +5,11 @@ description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.12.15",
-    "opencv-python>=4.12.0.88",
+    "brotli>=1.1.0",
     "pillow>=11.3.0",
     "selenium>=4.35.0",
     "webdriver-manager>=4.0.2",
     "websockets>=15.0.1",
+    "numpy (==2.2.4)",
+    "opencv-python-headless (>=4.12.0.88,<5.0.0.0)",
 ]
