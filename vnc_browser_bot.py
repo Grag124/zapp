@@ -466,7 +466,7 @@ class HyperionVNCBot:
             logger.error(f"❌ Failed to setup no-links mode: {e}")
             return False
 
-    def find_and_fill_name_input(self, name="111"):
+    def find_and_fill_name_input(self, name="runner"):
         """Find the name input field and fill it with the specified name."""
         try:
             logger.info(f"🔍 Looking for name input field...")
@@ -565,6 +565,31 @@ class HyperionVNCBot:
 
         except Exception as e:
             logger.error(f"❌ Failed to fill name input: {e}")
+            return False
+
+    def find_and_fill_password_input(self):
+        """Find the password input field and leave it blank."""
+        try:
+            logger.info("🔍 Looking for PASSWORD input field...")
+            # Use a similar approach to find the password input
+            css_selector = "input[placeholder*='password' i]"
+            
+            password_field = self.wait.until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, css_selector))
+            )
+            logger.info(f"✅ Found PASSWORD field using selector: {css_selector}")
+            
+            # Clear the field and leave it empty
+            password_field.clear()  # Effectively leaves the password blank
+            logger.info("✅ Password field left blank.")
+            
+            return True
+            
+        except TimeoutException:
+            logger.error("❌ Timeout waiting for PASSWORD input field")
+            return False
+        except Exception as e:
+            logger.error(f"❌ Failed to handle PASSWORD input: {e}")
             return False
 
     def click_continue_button(self):
