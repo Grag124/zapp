@@ -225,8 +225,15 @@ class TamingIOFirefoxBot:
     def take_screenshot(self, filename="taming_io_screenshot.png"):
         """Take a screenshot of the current page."""
         try:
-            self.driver.save_screenshot(filename)
-            logger.info(f"📸 Screenshot saved as: {filename}")
+            import os
+            # Create screenshots directory if it doesn't exist
+            if not os.path.exists("screenshots"):
+                os.makedirs("screenshots")
+            
+            # Save screenshot in the screenshots directory
+            filepath = os.path.join("screenshots", filename)
+            self.driver.save_screenshot(filepath)
+            logger.info(f"📸 Screenshot saved as: {filepath}")
             return True
         except Exception as e:
             logger.error(f"❌ Failed to take screenshot: {e}")
