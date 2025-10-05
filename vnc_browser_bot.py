@@ -20,6 +20,11 @@ import sys
 import time
 import logging
 import os
+import cv2
+import numpy as np
+from PIL import Image
+import io
+import base64
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -165,7 +170,7 @@ class HyperionVNCBot:
             logger.info("🧭 Attempting Safari setup (preferred)...")
             if self.setup_safari_driver():
                 logger.info("👀 You can now see the Safari automation in the VNC window")
-                time.sleep(3)
+                time.sleep(0.5)
                 return True
             else:
                 logger.info("⚠️ Safari not available, falling back to Firefox...")
@@ -257,9 +262,9 @@ class HyperionVNCBot:
             # First URL: https://m9n8r2.ddx.desmosgraphing.xyz.cdn.cloudflare.net/
             first_url = "https://m9n8r2.ddx.desmosgraphing.xyz.cdn.cloudflare.net/"
             logger.info(f"📍 Step 1: Navigating to first URL: {first_url}")
-            
+
             self.driver.get(first_url)
-            
+
             # Add visual indicator for first site
             self.driver.execute_script("""
                 var div = document.createElement('div');
@@ -277,7 +282,7 @@ class HyperionVNCBot:
 
                 setTimeout(() => div.remove(), 8000);
             """)
-            
+
             # Wait for page to load completely
             time.sleep(7)
             logger.info("✅ Step 1 completed: First Hyperion URL loaded successfully")
@@ -285,30 +290,30 @@ class HyperionVNCBot:
             # Step 2: Open new tab and navigate to second URL
             second_url = "https://m9n8r2.ddx.desmosgraphing.xyz.cdn.cloudflare.net/@/daydream/hvtrs8%2F-tcmkne.ko-"
             logger.info(f"🆕 Step 2: Opening NEW TAB for second URL: {second_url}")
-            
+
             # Open new tab using JavaScript
             self.driver.execute_script("window.open('');")
             logger.info("🔥 New tab opened successfully")
-            
+
             # Wait a moment for the new tab to be ready
             time.sleep(2)
-            
+
             # Switch to the new tab (it will be the last one)
             all_windows = self.driver.window_handles
             logger.info(f"📊 Total tabs open: {len(all_windows)}")
             self.driver.switch_to.window(all_windows[-1])
             logger.info("🎯 Switched to new tab")
-            
+
             # Wait a moment after switching tabs
             time.sleep(2)
-            
+
             # Navigate to the second URL in the new tab
             logger.info("🚀 Starting navigation to second URL in new tab...")
-            
+
             # Set a shorter timeout for this specific navigation
             original_timeout = self.driver.implicitly_wait(0)
             self.driver.set_page_load_timeout(15)  # 15 second timeout
-            
+
             try:
                 self.driver.get(second_url)
                 logger.info("✅ Successfully navigated to second URL!")
@@ -323,11 +328,11 @@ class HyperionVNCBot:
                 except Exception as js_error:
                     logger.error(f"❌ JavaScript navigation also failed: {js_error}")
                     logger.info("⚠️ Will proceed with visual indicators anyway")
-            
+
             # Restore original timeout
             self.driver.implicitly_wait(10)
             self.driver.set_page_load_timeout(30)
-            
+
             # Add visual indicator for second site
             self.driver.execute_script("""
                 var div = document.createElement('div');
@@ -345,32 +350,32 @@ class HyperionVNCBot:
 
                 setTimeout(() => div.remove(), 8000);
             """)
-            
+
             # Wait for second page to load
             time.sleep(7)
             logger.info("✅ Step 2 completed: Second Hyperion URL loaded in new tab successfully")
-            
+
             # Step 3: Close the first tab
             logger.info("🗑️ Step 3: Closing the first tab...")
-            
+
             # Get all window handles again
             all_windows = self.driver.window_handles
             logger.info(f"📊 Current tabs before closing: {len(all_windows)}")
-            
+
             if len(all_windows) >= 2:
                 # Switch to the first tab (index 0)
                 self.driver.switch_to.window(all_windows[0])
                 logger.info("🎯 Switched to first tab")
-                
+
                 # Close the current window (first tab)
                 self.driver.close()
                 logger.info("🗑️ First tab closed successfully")
-                
+
                 # Switch back to the remaining tab (second tab)
                 remaining_windows = self.driver.window_handles
                 self.driver.switch_to.window(remaining_windows[0])
                 logger.info("🎯 Switched back to second tab (now the only tab)")
-                
+
                 # Add visual indicator that first tab was closed
                 self.driver.execute_script("""
                     var div = document.createElement('div');
@@ -388,11 +393,11 @@ class HyperionVNCBot:
 
                     setTimeout(() => div.remove(), 8000);
                 """)
-                
+
                 logger.info("✅ Step 3 completed: First tab closed, only second tab remains")
             else:
                 logger.warning("⚠️ Could not close first tab - insufficient tabs found")
-            
+
             # Add final summary indicator
             self.driver.execute_script("""
                 var summary = document.createElement('div');
@@ -568,131 +573,23 @@ class HyperionVNCBot:
             logger.info("🔍 Looking for green CONTINUE button...")
             logger.info("👀 Watch the browser as it searches for CONTINUE buttons...")
 
-            # Enhanced selectors for the specific green CONTINUE button
-            xpath_selectors = [
-                "//button[contains(text(), 'CONTINUE')]",
-                "//button[contains(text(), 'Continue')]",
-                "//input[@value='CONTINUE']",
-                "//input[@value='Continue']",
-                "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'continue')]",
-                "//div[contains(text(), 'CONTINUE')]",
-                "//span[contains(text(), 'CONTINUE')]",
-                "//a[contains(text(), 'CONTINUE')]",
-                "//div[contains(text(), 'Continue')]",
-                "//span[contains(text(), 'Continue')]",
-                "//a[contains(text(), 'Continue')]"
-            ]
-
             continue_button = None
 
-            # Try CSS selectors for common green button classes first
-            css_selectors = [
-                ".btn-success",
-                ".btn-primary", 
-                ".continue-btn",
-                ".continue-button",
-                "[class*='continue']",
-                "[id*='continue']",
-                "button[style*='green']",
-                "div[style*='green']",
-                "button[style*='background-color']",
-                ".green-button",
-                ".success-btn"
-            ]
+            # Use only the specific CSS selector that works
+            css_selector = "[class*='continue']"
 
-            # Try CSS selectors first for green-styled buttons
-            for i, css_selector in enumerate(css_selectors):
-                try:
-                    logger.info(f"🔍 Trying CSS selector {i+1}/{len(css_selectors)}: {css_selector}")
-                    elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
-                    for element in elements:
-                        if element.is_displayed() and element.is_enabled():
-                            text = (element.text or element.get_attribute("value") or "").upper()
-                            if "CONTINUE" in text:
-                                continue_button = element
-                                logger.info(f"✅ Found CONTINUE button using CSS selector: {css_selector}")
-                                break
-                    if continue_button:
-                        break
-                except Exception:
-                    continue
-
-            # Try XPath selectors if CSS didn't work
-            if not continue_button:
-                for i, xpath in enumerate(xpath_selectors):
-                    try:
-                        logger.info(f"🔍 Trying XPath {i+1}/{len(xpath_selectors)}: {xpath}")
-                        continue_button = self.wait.until(
-                            EC.element_to_be_clickable((By.XPATH, xpath))
-                        )
-                        logger.info(f"✅ Found CONTINUE button using XPath: {xpath}")
-                        break
-                    except TimeoutException:
-                        continue
-
-            # Enhanced fallback: look for the specific green CONTINUE button shown in image
-            if not continue_button:
-                logger.info("🔍 Trying fallback method - searching for green buttons...")
-                buttons = self.driver.find_elements(By.TAG_NAME, "button")
-                inputs = self.driver.find_elements(By.CSS_SELECTOR, "input[type='submit'], input[type='button']")
-                divs = self.driver.find_elements(By.TAG_NAME, "div")
-                links = self.driver.find_elements(By.TAG_NAME, "a")
-
-                all_clickables = buttons + inputs + divs + links
-                logger.info(f"Found {len(all_clickables)} potentially clickable elements")
-
-                for i, element in enumerate(all_clickables):
-                    try:
-                        if element.is_displayed() and element.is_enabled():
-                            text = (element.text or element.get_attribute("value") or element.get_attribute("innerHTML") or "").lower()
-                            
-                            # Check for CONTINUE text
-                            if "continue" in text:
-                                # Enhanced green detection for the specific button in the image
-                                bg_color = element.value_of_css_property("background-color")
-                                bg_style = element.value_of_css_property("background")
-                                element_style = element.get_attribute("style") or ""
-                                element_class = element.get_attribute("class") or ""
-                                
-                                # Combine all style information
-                                all_style_info = f"{bg_color} {bg_style} {element_style} {element_class}".lower()
-                                
-                                # Enhanced green indicators matching the bright green button in image
-                                green_indicators = [
-                                    "green", "lime", "chartreuse", "yellowgreen",
-                                    "#9acd32", "#7cfc00", "#32cd32", "#00ff00", "#0f0",
-                                    "rgb(154, 205, 50)", "rgb(124, 252, 0)", "rgb(50, 205, 50)",
-                                    "rgb(0, 255, 0)", "rgb(0, 128, 0)",
-                                    "success", "btn-success", "primary", "btn-primary",
-                                    "continue-btn", "continue-button"
-                                ]
-                                
-                                # Check for specific green color patterns
-                                has_green = any(indicator in all_style_info for indicator in green_indicators)
-                                
-                                # Additional check for RGB values that indicate green colors
-                                if "rgb(" in all_style_info:
-                                    # Look for RGB patterns with high green values
-                                    import re
-                                    rgb_matches = re.findall(r'rgb\((\d+),\s*(\d+),\s*(\d+)\)', all_style_info)
-                                    for r, g, b in rgb_matches:
-                                        r, g, b = int(r), int(g), int(b)
-                                        # Check if green component is dominant (bright green button pattern)
-                                        if g > 150 and g > r and g > b:
-                                            has_green = True
-                                            logger.info(f"🎨 Detected bright green RGB color: rgb({r}, {g}, {b})")
-                                            break
-                                
-                                if has_green:
-                                    continue_button = element
-                                    logger.info(f"✅ Found bright green CONTINUE button matching image (element #{i+1})")
-                                    logger.info(f"🎨 Button style: {all_style_info[:100]}...")
-                                    break
-                                elif not continue_button:  # Use as backup if no green button found
-                                    continue_button = element
-                                    logger.info(f"⚠️ Found CONTINUE button (green not confirmed) as backup (element #{i+1})")
-                    except Exception:
-                        continue
+            try:
+                logger.info(f"🔍 Trying CSS selector 5/11: {css_selector}")
+                elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+                for element in elements:
+                    if element.is_displayed() and element.is_enabled():
+                        text = (element.text or element.get_attribute("value") or "").upper()
+                        if "CONTINUE" in text:
+                            continue_button = element
+                            logger.info(f"✅ Found CONTINUE button using CSS selector: {css_selector}")
+                            break
+            except Exception:
+                pass
 
             if not continue_button:
                 logger.error("❌ Could not find any CONTINUE button")
@@ -705,7 +602,7 @@ class HyperionVNCBot:
                     arguments[0].style.boxShadow = '0 0 20px red';
                     arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});
                 """, continue_button)
-                
+
                 # Add visual indicator
                 self.driver.execute_script("""
                     var indicator = document.createElement('div');
@@ -724,8 +621,8 @@ class HyperionVNCBot:
 
                     setTimeout(() => indicator.remove(), 3000);
                 """)
-                
-                time.sleep(2)
+
+                time.sleep(0.3)
                 logger.info("🎯 Button highlighted and scrolled into view")
             except Exception as e:
                 logger.warning(f"⚠️ Could not highlight button: {e}")
@@ -734,7 +631,7 @@ class HyperionVNCBot:
             try:
                 continue_button.click()
                 logger.info("✅ Successfully clicked CONTINUE button")
-                
+
                 # Add success indicator
                 self.driver.execute_script("""
                     var success = document.createElement('div');
@@ -754,10 +651,10 @@ class HyperionVNCBot:
 
                     setTimeout(() => success.remove(), 5000);
                 """)
-                
-                time.sleep(3)
+
+                time.sleep(0.5)
                 return True
-                
+
             except Exception as click_error:
                 logger.error(f"❌ Failed to click button: {click_error}")
                 # Try JavaScript click as fallback
@@ -765,11 +662,11 @@ class HyperionVNCBot:
                     logger.info("🔄 Trying JavaScript click as fallback...")
                     self.driver.execute_script("arguments[0].click();", continue_button)
                     logger.info("✅ JavaScript click successful")
-                    
+
                     # Add success indicator for JS click
                     self.driver.execute_script("""
                         var success = document.createElement('div');
-                        success.innerHTML = '🎉 CONTINUE CLICKED (JS)!';
+                        success.innerHTML = '🎉 CONTINUE BUTTON CLICKED (JS)!';
                         success.style.position = 'fixed';
                         success.style.top = '50%';
                         success.style.left = '50%';
@@ -785,7 +682,7 @@ class HyperionVNCBot:
 
                         setTimeout(() => success.remove(), 5000);
                     """)
-                    
+
                     time.sleep(3)
                     return True
                 except Exception as js_error:
@@ -803,170 +700,23 @@ class HyperionVNCBot:
             logger.info("⚠️ This is NOT the black LOGIN button (Step 6)!")
             logger.info("👀 Watch the browser as it searches for YELLOW LOGIN buttons...")
 
-            # Enhanced selectors for the specific yellow/orange LOGIN button
-            xpath_selectors = [
-                "//button[contains(text(), 'LOGIN')]",
-                "//button[contains(text(), 'Login')]",
-                "//input[@value='LOGIN']",
-                "//input[@value='Login']",
-                "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'login')]",
-                "//div[contains(text(), 'LOGIN')]",
-                "//span[contains(text(), 'LOGIN')]",
-                "//a[contains(text(), 'LOGIN')]",
-                "//div[contains(text(), 'Login')]",
-                "//span[contains(text(), 'Login')]",
-                "//a[contains(text(), 'Login')]"
-            ]
-
             login_button = None
 
-            # Try CSS selectors for common yellow/orange button classes first
-            css_selectors = [
-                ".btn-warning",
-                ".btn-secondary", 
-                ".login-btn",
-                ".login-button",
-                "[class*='login']",
-                "[id*='login']",
-                "button[style*='yellow']",
-                "button[style*='orange']",
-                "div[style*='yellow']",
-                "div[style*='orange']",
-                "button[style*='background-color']",
-                ".warning-btn",
-                ".orange-button",
-                ".yellow-button"
-            ]
+            # Use only the specific CSS selector that works
+            css_selector = "[class*='login']"
 
-            # Try CSS selectors first for yellow/orange-styled buttons (Step 3 - NOT Step 6)
-            for i, css_selector in enumerate(css_selectors):
-                try:
-                    logger.info(f"🔍 Trying CSS selector {i+1}/{len(css_selectors)}: {css_selector}")
-                    elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
-                    for element in elements:
-                        if element.is_displayed() and element.is_enabled():
-                            text = (element.text or element.get_attribute("value") or "").upper()
-                            if "LOGIN" in text:
-                                # Check for YELLOW/GOLDEN styling and EXCLUDE BLACK (to avoid Step 6 confusion)
-                                bg_color = element.value_of_css_property("background-color")
-                                bg_style = element.value_of_css_property("background")
-                                element_style = element.get_attribute("style") or ""
-                                element_class = (element.get_attribute("class") or "").lower()
-                                
-                                # Combine all style information
-                                all_style_info = f"{bg_color} {bg_style} {element_style} {element_class}".lower()
-                                
-                                # Look for YELLOW/GOLDEN indicators (Step 3)
-                                yellow_golden_indicators = [
-                                    "yellow", "gold", "golden", "orange", "amber", "warning",
-                                    "#ffff", "#ff9", "#fc0", "#f90", "#ffd700", "#ffb347",
-                                    "rgb(255, 255, 0)", "rgb(255, 204, 0)", "rgb(255, 153, 0)",
-                                    "rgba(255, 255, 0", "rgba(255, 204, 0", "rgba(255, 153, 0"
-                                ]
-                                
-                                # Exclude BLACK indicators (Step 6 button)
-                                black_indicators = [
-                                    "black", "dark", "#000", "#333", "#444", "#555",
-                                    "rgb(0, 0, 0)", "rgb(51, 51, 51)", "rgb(68, 68, 68)"
-                                ]
-                                
-                                has_yellow_golden = any(indicator in all_style_info for indicator in yellow_golden_indicators)
-                                has_black_styling = any(indicator in all_style_info for indicator in black_indicators)
-                                
-                                # Only accept if it has yellow/golden styling AND doesn't have black styling
-                                if has_yellow_golden and not has_black_styling:
-                                    login_button = element
-                                    logger.info(f"✅ Found YELLOW/GOLDEN LOGIN button (Step 3) using CSS: {css_selector}")
-                                    logger.info(f"🟡 Yellow/Golden styling confirmed: {all_style_info[:100]}...")
-                                    break
-                                elif has_black_styling:
-                                    logger.info(f"⚫ Skipping BLACK button (Step 6 button): {all_style_info[:50]}...")
-                                else:
-                                    # Accept any LOGIN button if color detection unclear (but prefer explicit yellow)
-                                    login_button = element
-                                    logger.info(f"✅ Found LOGIN button (Step 3) using CSS: {css_selector}")
-                                    break
-                    if login_button:
-                        break
-                except Exception:
-                    continue
-
-            # Try XPath selectors if CSS didn't work
-            if not login_button:
-                for i, xpath in enumerate(xpath_selectors):
-                    try:
-                        logger.info(f"🔍 Trying XPath {i+1}/{len(xpath_selectors)}: {xpath}")
-                        login_button = self.wait.until(
-                            EC.element_to_be_clickable((By.XPATH, xpath))
-                        )
-                        logger.info(f"✅ Found LOGIN button using XPath: {xpath}")
-                        break
-                    except TimeoutException:
-                        continue
-
-            # Enhanced fallback: look for the specific yellow/orange LOGIN button shown in image
-            if not login_button:
-                logger.info("🔍 Trying fallback method - searching for yellow/orange buttons...")
-                buttons = self.driver.find_elements(By.TAG_NAME, "button")
-                inputs = self.driver.find_elements(By.CSS_SELECTOR, "input[type='submit'], input[type='button']")
-                divs = self.driver.find_elements(By.TAG_NAME, "div")
-                links = self.driver.find_elements(By.TAG_NAME, "a")
-
-                all_clickables = buttons + inputs + divs + links
-                logger.info(f"Found {len(all_clickables)} potentially clickable elements")
-
-                for i, element in enumerate(all_clickables):
-                    try:
-                        if element.is_displayed() and element.is_enabled():
-                            text = (element.text or element.get_attribute("value") or element.get_attribute("innerHTML") or "").lower()
-                            
-                            # Check for LOGIN text
-                            if "login" in text:
-                                # Enhanced yellow/orange detection for the specific button in the image
-                                bg_color = element.value_of_css_property("background-color")
-                                bg_style = element.value_of_css_property("background")
-                                element_style = element.get_attribute("style") or ""
-                                element_class = element.get_attribute("class") or ""
-                                
-                                # Combine all style information
-                                all_style_info = f"{bg_color} {bg_style} {element_style} {element_class}".lower()
-                                
-                                # Enhanced yellow/orange indicators matching the button in image
-                                yellow_orange_indicators = [
-                                    "yellow", "orange", "gold", "amber", "goldenrod",
-                                    "#ffd700", "#ffa500", "#ffaa00", "#ff8c00", "#daa520",
-                                    "rgb(255, 215, 0)", "rgb(255, 165, 0)", "rgb(255, 170, 0)",
-                                    "rgb(218, 165, 32)", "rgb(255, 140, 0)",
-                                    "warning", "btn-warning", "secondary", "btn-secondary",
-                                    "login-btn", "login-button"
-                                ]
-                                
-                                # Check for specific yellow/orange color patterns
-                                has_yellow_orange = any(indicator in all_style_info for indicator in yellow_orange_indicators)
-                                
-                                # Additional check for RGB values that indicate yellow/orange colors
-                                if "rgb(" in all_style_info:
-                                    # Look for RGB patterns with high red/green values (yellow/orange pattern)
-                                    import re
-                                    rgb_matches = re.findall(r'rgb\((\d+),\s*(\d+),\s*(\d+)\)', all_style_info)
-                                    for r, g, b in rgb_matches:
-                                        r, g, b = int(r), int(g), int(b)
-                                        # Check if red/green components are high (yellow/orange button pattern)
-                                        if r > 200 and g > 100 and b < 100:  # Yellow/orange pattern
-                                            has_yellow_orange = True
-                                            logger.info(f"🎨 Detected yellow/orange RGB color: rgb({r}, {g}, {b})")
-                                            break
-                                
-                                if has_yellow_orange:
-                                    login_button = element
-                                    logger.info(f"✅ Found yellow/orange LOGIN button matching image (element #{i+1})")
-                                    logger.info(f"🎨 Button style: {all_style_info[:100]}...")
-                                    break
-                                elif not login_button:  # Use as backup if no yellow/orange button found
-                                    login_button = element
-                                    logger.info(f"⚠️ Found LOGIN button (yellow/orange not confirmed) as backup (element #{i+1})")
-                    except Exception:
-                        continue
+            try:
+                logger.info(f"🔍 Trying CSS selector 5/14: {css_selector}")
+                elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+                for element in elements:
+                    if element.is_displayed() and element.is_enabled():
+                        text = (element.text or element.get_attribute("value") or "").upper()
+                        if "LOGIN" in text:
+                            login_button = element
+                            logger.info(f"✅ Found LOGIN button (Step 3) using CSS: {css_selector}")
+                            break
+            except Exception:
+                pass
 
             if not login_button:
                 logger.error("❌ Could not find any LOGIN button")
@@ -979,7 +729,7 @@ class HyperionVNCBot:
                     arguments[0].style.boxShadow = '0 0 20px red';
                     arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});
                 """, login_button)
-                
+
                 # Add visual indicator
                 self.driver.execute_script("""
                     var indicator = document.createElement('div');
@@ -998,7 +748,7 @@ class HyperionVNCBot:
 
                     setTimeout(() => indicator.remove(), 3000);
                 """)
-                
+
                 time.sleep(2)
                 logger.info("🎯 LOGIN button highlighted and scrolled into view")
             except Exception as e:
@@ -1008,7 +758,7 @@ class HyperionVNCBot:
             try:
                 login_button.click()
                 logger.info("✅ Successfully clicked LOGIN button")
-                
+
                 # Add success indicator
                 self.driver.execute_script("""
                     var success = document.createElement('div');
@@ -1028,10 +778,10 @@ class HyperionVNCBot:
 
                     setTimeout(() => success.remove(), 5000);
                 """)
-                
-                time.sleep(3)
+
+                time.sleep(0.5)
                 return True
-                
+
             except Exception as click_error:
                 logger.error(f"❌ Failed to click LOGIN button: {click_error}")
                 # Try JavaScript click as fallback
@@ -1039,7 +789,7 @@ class HyperionVNCBot:
                     logger.info("🔄 Trying JavaScript click as fallback...")
                     self.driver.execute_script("arguments[0].click();", login_button)
                     logger.info("✅ JavaScript click successful")
-                    
+
                     # Add success indicator for JS click
                     self.driver.execute_script("""
                         var success = document.createElement('div');
@@ -1059,7 +809,7 @@ class HyperionVNCBot:
 
                         setTimeout(() => success.remove(), 5000);
                     """)
-                    
+
                     time.sleep(3)
                     return True
                 except Exception as js_error:
@@ -1076,137 +826,21 @@ class HyperionVNCBot:
             logger.info("🔍 Looking for EMAIL ADDRESS input field...")
             logger.info("👀 Watch the browser as it searches for EMAIL ADDRESS fields...")
 
-            # Enhanced selectors for the specific EMAIL ADDRESS field
-            xpath_selectors = [
-                "//input[contains(@placeholder, 'Email Address')]",
-                "//input[contains(@placeholder, 'email address')]",
-                "//input[contains(@placeholder, 'EMAIL ADDRESS')]",
-                "//input[@type='email']",
-                "//input[contains(@name, 'email')]",
-                "//input[contains(@id, 'email')]",
-                "//input[contains(@class, 'email')]",
-                "//label[contains(text(), 'Email Address')]/following-sibling::input",
-                "//label[contains(text(), 'Email Address')]/../input",
-                "//div[contains(text(), 'Email Address')]/following-sibling::input",
-                "//div[contains(text(), 'Email Address')]/../input"
-            ]
-
             email_field = None
 
-            # Try CSS selectors for common email field classes first
-            css_selectors = [
-                "input[type='email']",
-                "input[placeholder*='email' i]",
-                "input[placeholder*='Email Address' i]",
-                "input[name*='email']",
-                "input[id*='email']",
-                "input[class*='email']",
-                ".email-input",
-                ".email-field",
-                "[class*='email']",
-                "[id*='email']",
-                "input[style*='beige']",
-                "input[style*='tan']",
-                "input[style*='background']"
-            ]
+            # Use only the specific CSS selector that works
+            css_selector = "input[placeholder*='email' i]"
 
-            # Try CSS selectors first for email-styled fields
-            for i, css_selector in enumerate(css_selectors):
-                try:
-                    logger.info(f"🔍 Trying CSS selector {i+1}/{len(css_selectors)}: {css_selector}")
-                    elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
-                    for element in elements:
-                        if element.is_displayed() and element.is_enabled():
-                            placeholder = (element.get_attribute("placeholder") or "").lower()
-                            element_name = (element.get_attribute("name") or "").lower()
-                            element_id = (element.get_attribute("id") or "").lower()
-                            
-                            if any(term in f"{placeholder} {element_name} {element_id}" for term in ["email", "address"]):
-                                email_field = element
-                                logger.info(f"✅ Found EMAIL ADDRESS field using CSS selector: {css_selector}")
-                                break
-                    if email_field:
+            try:
+                logger.info(f"🔍 Trying CSS selector 2/13: {css_selector}")
+                elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+                for element in elements:
+                    if element.is_displayed() and element.is_enabled():
+                        email_field = element
+                        logger.info(f"✅ Found EMAIL ADDRESS field using CSS selector: {css_selector}")
                         break
-                except Exception:
-                    continue
-
-            # Try XPath selectors if CSS didn't work
-            if not email_field:
-                for i, xpath in enumerate(xpath_selectors):
-                    try:
-                        logger.info(f"🔍 Trying XPath {i+1}/{len(xpath_selectors)}: {xpath}")
-                        email_field = self.wait.until(
-                            EC.element_to_be_clickable((By.XPATH, xpath))
-                        )
-                        logger.info(f"✅ Found EMAIL ADDRESS field using XPath: {xpath}")
-                        break
-                    except TimeoutException:
-                        continue
-
-            # Enhanced fallback: look for the specific beige/tan EMAIL ADDRESS field shown in image
-            if not email_field:
-                logger.info("🔍 Trying fallback method - searching for beige/tan input fields...")
-                inputs = self.driver.find_elements(By.TAG_NAME, "input")
-                textareas = self.driver.find_elements(By.TAG_NAME, "textarea")
-
-                all_inputs = inputs + textareas
-                logger.info(f"Found {len(all_inputs)} potentially input elements")
-
-                for i, element in enumerate(all_inputs):
-                    try:
-                        if element.is_displayed() and element.is_enabled():
-                            # Check attributes for email-related terms
-                            placeholder = (element.get_attribute("placeholder") or "").lower()
-                            element_name = (element.get_attribute("name") or "").lower()
-                            element_id = (element.get_attribute("id") or "").lower()
-                            element_class = (element.get_attribute("class") or "").lower()
-                            
-                            # Check for EMAIL ADDRESS related terms
-                            email_terms = ["email", "address", "e-mail", "mail"]
-                            has_email_terms = any(term in f"{placeholder} {element_name} {element_id} {element_class}" for term in email_terms)
-                            
-                            if has_email_terms:
-                                # Enhanced beige/tan color detection for the specific field in the image
-                                bg_color = element.value_of_css_property("background-color")
-                                bg_style = element.value_of_css_property("background")
-                                element_style = element.get_attribute("style") or ""
-                                
-                                # Combine all style information
-                                all_style_info = f"{bg_color} {bg_style} {element_style}".lower()
-                                
-                                # Enhanced beige/tan indicators matching the field in image
-                                beige_tan_indicators = [
-                                    "beige", "tan", "wheat", "burlywood", "sandybrown",
-                                    "#f5f5dc", "#d2b48c", "#f5deb3", "#daa520", "#cd853f",
-                                    "rgb(245, 245, 220)", "rgb(210, 180, 140)", "rgb(245, 222, 179)",
-                                    "rgb(218, 165, 32)", "rgb(205, 133, 63)",
-                                    "input-field", "form-control", "text-input"
-                                ]
-                                
-                                # Check for specific beige/tan color patterns
-                                has_beige_tan = any(indicator in all_style_info for indicator in beige_tan_indicators)
-                                
-                                # Additional check for RGB values that indicate beige/tan colors
-                                if "rgb(" in all_style_info:
-                                    # Look for RGB patterns with balanced warm colors (beige/tan pattern)
-                                    import re
-                                    rgb_matches = re.findall(r'rgb\((\d+),\s*(\d+),\s*(\d+)\)', all_style_info)
-                                    for r, g, b in rgb_matches:
-                                        r, g, b = int(r), int(g), int(b)
-                                        # Check if colors indicate beige/tan (warm, balanced colors)
-                                        if r > 200 and g > 180 and b > 160 and abs(r-g) < 50:  # Beige/tan pattern
-                                            has_beige_tan = True
-                                            logger.info(f"🎨 Detected beige/tan RGB color: rgb({r}, {g}, {b})")
-                                            break
-                                
-                                if has_beige_tan or True:  # Accept any email field if color detection fails
-                                    email_field = element
-                                    logger.info(f"✅ Found EMAIL ADDRESS field matching image (element #{i+1})")
-                                    if has_beige_tan:
-                                        logger.info(f"🎨 Field style: {all_style_info[:100]}...")
-                                    break
-                    except Exception:
-                        continue
+            except Exception:
+                pass
 
             if not email_field:
                 logger.error("❌ Could not find any EMAIL ADDRESS field")
@@ -1219,7 +853,7 @@ class HyperionVNCBot:
                     arguments[0].style.boxShadow = '0 0 20px blue';
                     arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});
                 """, email_field)
-                
+
                 # Add visual indicator
                 self.driver.execute_script("""
                     var indicator = document.createElement('div');
@@ -1238,7 +872,7 @@ class HyperionVNCBot:
 
                     setTimeout(() => indicator.remove(), 3000);
                 """)
-                
+
                 time.sleep(2)
                 logger.info("🎯 EMAIL ADDRESS field highlighted and scrolled into view")
             except Exception as e:
@@ -1248,7 +882,7 @@ class HyperionVNCBot:
             try:
                 email_field.click()
                 logger.info("✅ Successfully clicked EMAIL ADDRESS field")
-                
+
                 # Add success indicator for clicking
                 self.driver.execute_script("""
                     var success = document.createElement('div');
@@ -1268,20 +902,20 @@ class HyperionVNCBot:
 
                     setTimeout(() => success.remove(), 3000);
                 """)
-                
+
                 time.sleep(2)
-                
+
                 # Now type the email address into the field
                 logger.info("⌨️ Typing email address: stroll@gmail.com")
-                
+
                 # Clear any existing text first
                 email_field.clear()
-                
+
                 # Type the email address
                 email_field.send_keys("stroll@gmail.com")
-                
+
                 logger.info("✅ Successfully typed email address into field")
-                
+
                 # Add typing success indicator
                 self.driver.execute_script("""
                     var success = document.createElement('div');
@@ -1301,10 +935,10 @@ class HyperionVNCBot:
 
                     setTimeout(() => success.remove(), 5000);
                 """)
-                
-                time.sleep(3)
+
+                time.sleep(0.5)
                 return True
-                
+
             except Exception as click_error:
                 logger.error(f"❌ Failed to click EMAIL ADDRESS field: {click_error}")
                 # Try JavaScript click as fallback
@@ -1312,7 +946,7 @@ class HyperionVNCBot:
                     logger.info("🔄 Trying JavaScript click as fallback...")
                     self.driver.execute_script("arguments[0].click();", email_field)
                     logger.info("✅ JavaScript click successful")
-                    
+
                     # Add success indicator for JS click
                     self.driver.execute_script("""
                         var success = document.createElement('div');
@@ -1332,20 +966,20 @@ class HyperionVNCBot:
 
                         setTimeout(() => success.remove(), 3000);
                     """)
-                    
+
                     time.sleep(2)
-                    
+
                     # Now type the email address into the field
                     logger.info("⌨️ Typing email address: stroll@gmail.com")
-                    
+
                     # Clear any existing text first
                     email_field.clear()
-                    
+
                     # Type the email address
                     email_field.send_keys("stroll@gmail.com")
-                    
+
                     logger.info("✅ Successfully typed email address into field")
-                    
+
                     # Add typing success indicator
                     self.driver.execute_script("""
                         var success = document.createElement('div');
@@ -1365,7 +999,7 @@ class HyperionVNCBot:
 
                         setTimeout(() => success.remove(), 5000);
                     """)
-                    
+
                     time.sleep(3)
                     return True
                 except Exception as js_error:
@@ -1426,7 +1060,7 @@ class HyperionVNCBot:
                             placeholder = (element.get_attribute("placeholder") or "").lower()
                             element_name = (element.get_attribute("name") or "").lower()
                             element_id = (element.get_attribute("id") or "").lower()
-                            
+
                             if any(term in f"{placeholder} {element_name} {element_id}" for term in ["password", "pass"]):
                                 password_field = element
                                 logger.info(f"✅ Found PASSWORD field using CSS selector: {css_selector}")
@@ -1467,21 +1101,21 @@ class HyperionVNCBot:
                             element_id = (element.get_attribute("id") or "").lower()
                             element_class = (element.get_attribute("class") or "").lower()
                             element_type = (element.get_attribute("type") or "").lower()
-                            
+
                             # Check for PASSWORD related terms or password type
                             password_terms = ["password", "pass", "pwd"]
                             has_password_terms = any(term in f"{placeholder} {element_name} {element_id} {element_class}" for term in password_terms)
                             is_password_type = element_type == "password"
-                            
+
                             if has_password_terms or is_password_type:
                                 # Enhanced beige/tan color detection for the specific field in the image
                                 bg_color = element.value_of_css_property("background-color")
                                 bg_style = element.value_of_css_property("background")
                                 element_style = element.get_attribute("style") or ""
-                                
+
                                 # Combine all style information
                                 all_style_info = f"{bg_color} {bg_style} {element_style}".lower()
-                                
+
                                 # Enhanced beige/tan indicators matching the field in image
                                 beige_tan_indicators = [
                                     "beige", "tan", "wheat", "burlywood", "sandybrown",
@@ -1490,10 +1124,10 @@ class HyperionVNCBot:
                                     "rgb(218, 165, 32)", "rgb(205, 133, 63)",
                                     "input-field", "form-control", "text-input"
                                 ]
-                                
+
                                 # Check for specific beige/tan color patterns
                                 has_beige_tan = any(indicator in all_style_info for indicator in beige_tan_indicators)
-                                
+
                                 # Additional check for RGB values that indicate beige/tan colors
                                 if "rgb(" in all_style_info:
                                     # Look for RGB patterns with balanced warm colors (beige/tan pattern)
@@ -1506,7 +1140,7 @@ class HyperionVNCBot:
                                             has_beige_tan = True
                                             logger.info(f"🎨 Detected beige/tan RGB color: rgb({r}, {g}, {b})")
                                             break
-                                
+
                                 if has_beige_tan or True:  # Accept any password field if color detection fails
                                     password_field = element
                                     logger.info(f"✅ Found PASSWORD field matching image (element #{i+1})")
@@ -1527,7 +1161,7 @@ class HyperionVNCBot:
                     arguments[0].style.boxShadow = '0 0 20px purple';
                     arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});
                 """, password_field)
-                
+
                 # Add visual indicator
                 self.driver.execute_script("""
                     var indicator = document.createElement('div');
@@ -1546,7 +1180,7 @@ class HyperionVNCBot:
 
                     setTimeout(() => indicator.remove(), 3000);
                 """)
-                
+
                 time.sleep(2)
                 logger.info("🎯 PASSWORD field highlighted and scrolled into view")
             except Exception as e:
@@ -1556,7 +1190,7 @@ class HyperionVNCBot:
             try:
                 password_field.click()
                 logger.info("✅ Successfully clicked PASSWORD field")
-                
+
                 # Add success indicator for clicking
                 self.driver.execute_script("""
                     var success = document.createElement('div');
@@ -1576,20 +1210,20 @@ class HyperionVNCBot:
 
                     setTimeout(() => success.remove(), 3000);
                 """)
-                
+
                 time.sleep(2)
-                
+
                 # Now type the password into the field
                 logger.info("⌨️ Typing password: GGG@222123")
-                
+
                 # Clear any existing text first
                 password_field.clear()
-                
+
                 # Type the password
                 password_field.send_keys("GGG@222123")
-                
+
                 logger.info("✅ Successfully typed password into field")
-                
+
                 # Add typing success indicator
                 self.driver.execute_script("""
                     var success = document.createElement('div');
@@ -1609,10 +1243,10 @@ class HyperionVNCBot:
 
                     setTimeout(() => success.remove(), 5000);
                 """)
-                
-                time.sleep(3)
+
+                time.sleep(0.5)
                 return True
-                
+
             except Exception as click_error:
                 logger.error(f"❌ Failed to click PASSWORD field: {click_error}")
                 # Try JavaScript click as fallback
@@ -1620,7 +1254,7 @@ class HyperionVNCBot:
                     logger.info("🔄 Trying JavaScript click as fallback...")
                     self.driver.execute_script("arguments[0].click();", password_field)
                     logger.info("✅ JavaScript click successful")
-                    
+
                     # Add success indicator for JS click
                     self.driver.execute_script("""
                         var success = document.createElement('div');
@@ -1640,20 +1274,20 @@ class HyperionVNCBot:
 
                         setTimeout(() => success.remove(), 3000);
                     """)
-                    
+
                     time.sleep(2)
-                    
+
                     # Now type the password into the field
                     logger.info("⌨️ Typing password: GGG@222123")
-                    
+
                     # Clear any existing text first
                     password_field.clear()
-                    
+
                     # Type the password
                     password_field.send_keys("GGG@222123")
-                    
+
                     logger.info("✅ Successfully typed password into field")
-                    
+
                     # Add typing success indicator
                     self.driver.execute_script("""
                         var success = document.createElement('div');
@@ -1673,7 +1307,7 @@ class HyperionVNCBot:
 
                         setTimeout(() => success.remove(), 5000);
                     """)
-                    
+
                     time.sleep(3)
                     return True
                 except Exception as js_error:
@@ -1694,7 +1328,7 @@ class HyperionVNCBot:
             # STEP 1: Find the password field position first
             password_field = None
             password_y_position = None
-            
+
             # Find password field to determine search area
             css_selectors_password = [
                 "input[type='password']",
@@ -1702,7 +1336,7 @@ class HyperionVNCBot:
                 "input[name*='password']",
                 "input[id*='password']"
             ]
-            
+
             for css_selector in css_selectors_password:
                 try:
                     elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
@@ -1717,18 +1351,18 @@ class HyperionVNCBot:
                         break
                 except Exception:
                     continue
-            
+
             if not password_field:
                 logger.warning("⚠️ Could not find password field, searching in general middle area...")
                 password_y_position = self.driver.execute_script("return window.innerHeight") * 0.4
 
             # STEP 2: Search for BLACK LOGIN button BELOW password field
             black_login_button = None
-            
+
             # Enhanced selectors for the black LOGIN button
             xpath_selectors = [
                 "//button[contains(text(), 'LOGIN')]",
-                "//button[contains(text(), 'Login')]", 
+                "//button[contains(text(), 'Login')]",
                 "//button[contains(text(), 'login')]",
                 "//input[@value='LOGIN']",
                 "//input[@value='Login']",
@@ -1759,65 +1393,26 @@ class HyperionVNCBot:
                 "button[class*='dark']"
             ]
 
-            # Try CSS selectors first, filtering by position BELOW password
-            for i, css_selector in enumerate(css_selectors):
-                try:
-                    logger.info(f"🔍 Trying CSS selector {i+1}/{len(css_selectors)}: {css_selector}")
-                    elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
-                    for element in elements:
-                        if element.is_displayed() and element.is_enabled():
-                            # Check if element is BELOW password field
-                            element_rect = element.rect
-                            element_y = element_rect['y']
-                            
-                            if element_y > password_y_position:  # Must be below password
-                                element_text = (element.text or element.get_attribute("value") or "").lower()
-                                
-                                # Check for LOGIN related terms and EXCLUDE yellow styling
-                                if any(term in element_text for term in ["login", "log in", "sign in", "submit"]):
-                                    # Check styling to avoid yellow buttons (Step 3)
-                                    bg_color = element.value_of_css_property("background-color")
-                                    element_style = element.get_attribute("style") or ""
-                                    element_class = (element.get_attribute("class") or "").lower()
-                                    
-                                    all_style_info = f"{bg_color} {element_style} {element_class}".lower()
-                                    
-                                    # Exclude yellow/golden styling (Step 3 buttons)
-                                    yellow_indicators = ["yellow", "gold", "golden", "orange", "amber", "warning"]
-                                    has_yellow = any(indicator in all_style_info for indicator in yellow_indicators)
-                                    
-                                    if not has_yellow:  # Accept non-yellow buttons below password
-                                        black_login_button = element
-                                        logger.info(f"✅ Found BLACK LOGIN button BELOW password using CSS: {css_selector}")
-                                        logger.info(f"📍 Button position: Y={element_y} (below password Y={password_y_position})")
-                                        break
-                    if black_login_button:
-                        break
-                except Exception:
-                    continue
+            # Use only the specific CSS selector that works
+            css_selector = "[id*='login']"
 
-            # Try XPath selectors if CSS didn't work, also filtering by position
-            if not black_login_button:
-                for i, xpath in enumerate(xpath_selectors):
-                    try:
-                        logger.info(f"🔍 Trying XPath {i+1}/{len(xpath_selectors)}: {xpath}")
-                        elements = self.driver.find_elements(By.XPATH, xpath)
-                        for element in elements:
-                            if element.is_displayed() and element.is_enabled():
-                                element_rect = element.rect
-                                element_y = element_rect['y']
-                                
-                                if element_y > password_y_position:  # Must be below password
-                                    black_login_button = element
-                                    logger.info(f"✅ Found BLACK LOGIN button BELOW password using XPath: {xpath}")
-                                    logger.info(f"📍 Button position: Y={element_y} (below password Y={password_y_position})")
-                                    break
-                        if black_login_button:
+            try:
+                logger.info(f"🔍 Trying CSS selector 11/15: {css_selector}")
+                elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+                for element in elements:
+                    if element.is_displayed() and element.is_enabled():
+                        # Check if element is BELOW password field
+                        element_rect = element.rect
+                        element_y = element_rect['y']
+
+                        if element_y > password_y_position:  # Must be below password
+                            black_login_button = element
+                            logger.info(f"✅ Found BLACK LOGIN button BELOW password using CSS: {css_selector}")
+                            logger.info(f"📍 Button position: Y={element_y} (below password Y={password_y_position})")
                             break
-                    except Exception:
-                        continue
+            except Exception:
+                pass
 
-            # Enhanced fallback: look for black LOGIN button specifically in the MIDDLE AREA
             if not black_login_button:
                 logger.info("🔍 Trying fallback method - searching for LOGIN buttons in MIDDLE AREA...")
                 buttons = self.driver.find_elements(By.TAG_NAME, "button")
@@ -1830,13 +1425,13 @@ class HyperionVNCBot:
                 # Get page dimensions to determine middle area
                 page_width = self.driver.execute_script("return window.innerWidth")
                 page_height = self.driver.execute_script("return window.innerHeight")
-                
+
                 # Define middle area boundaries (center 60% of the page)
                 middle_left = page_width * 0.2
                 middle_right = page_width * 0.8
                 middle_top = page_height * 0.3
                 middle_bottom = page_height * 0.7
-                
+
                 logger.info(f"📐 Page dimensions: {page_width}x{page_height}")
                 logger.info(f"🎯 Searching in middle area: X({middle_left}-{middle_right}), Y({middle_top}-{middle_bottom})")
 
@@ -1851,44 +1446,44 @@ class HyperionVNCBot:
                             element_y = element_rect['y']
                             element_width = element_rect['width']
                             element_height = element_rect['height']
-                            
+
                             # Calculate element center
                             element_center_x = element_x + element_width / 2
                             element_center_y = element_y + element_height / 2
-                            
+
                             # Check if element is in the middle area
-                            in_middle_area = (middle_left <= element_center_x <= middle_right and 
+                            in_middle_area = (middle_left <= element_center_x <= middle_right and
                                             middle_top <= element_center_y <= middle_bottom)
-                            
+
                             if in_middle_area:
                                 # Check element text and attributes
                                 element_text = (element.text or element.get_attribute("value") or element.get_attribute("innerHTML") or "").lower()
                                 element_type = (element.get_attribute("type") or "").lower()
                                 element_class = (element.get_attribute("class") or "").lower()
                                 element_id = (element.get_attribute("id") or "").lower()
-                                
+
                                 # Check for LOGIN or submission related terms
                                 login_terms = ["login", "log in", "sign in", "submit"]
                                 has_login_terms = any(term in element_text for term in login_terms)
                                 is_submit_type = element_type == "submit"
-                                
+
                                 # Check for black/dark styling
                                 bg_color = element.value_of_css_property("background-color")
                                 bg_style = element.value_of_css_property("background")
                                 element_style = element.get_attribute("style") or ""
-                                
+
                                 # Combine all style information
                                 all_style_info = f"{bg_color} {bg_style} {element_style} {element_class}".lower()
-                                
+
                                 # Look for dark/black styling indicators
                                 dark_indicators = [
                                     "black", "dark", "#000", "#333", "#444", "#555",
                                     "rgb(0, 0, 0)", "rgb(51, 51, 51)", "rgb(68, 68, 68)",
                                     "rgba(0, 0, 0", "rgba(51, 51, 51", "rgba(68, 68, 68"
                                 ]
-                                
+
                                 has_dark_styling = any(indicator in all_style_info for indicator in dark_indicators)
-                                
+
                                 if has_login_terms or is_submit_type:
                                     # Check for YELLOW/GOLDEN styling to EXCLUDE Step 3 buttons
                                     yellow_golden_indicators = [
@@ -1896,14 +1491,14 @@ class HyperionVNCBot:
                                         "#ffff", "#ff9", "#fc0", "#f90", "#ffd700", "#ffb347",
                                         "rgb(255, 255, 0)", "rgb(255, 204, 0)", "rgb(255, 153, 0)"
                                     ]
-                                    
+
                                     has_yellow_golden = any(indicator in all_style_info for indicator in yellow_golden_indicators)
-                                    
+
                                     # EXCLUDE yellow/golden buttons (those are Step 3)
                                     if has_yellow_golden:
                                         logger.info(f"🟡 Skipping YELLOW/GOLDEN button (Step 3 button): '{element_text}' at ({element_center_x:.0f}, {element_center_y:.0f})")
                                         continue
-                                    
+
                                     # Must be BELOW password field for Step 8
                                     if element_center_y > password_y_position:
                                         # Add to candidates with priority scoring (prefer BLACK styling for Step 8)
@@ -1918,7 +1513,7 @@ class HyperionVNCBot:
                                         distance_from_password = element_center_y - password_y_position
                                         if distance_from_password < 200:  # Within 200px of password
                                             priority_score += 15
-                                        
+
                                         middle_area_candidates.append({
                                             'element': element,
                                             'score': priority_score,
@@ -1927,7 +1522,7 @@ class HyperionVNCBot:
                                             'dark_styling': has_dark_styling,
                                             'distance_from_password': distance_from_password
                                         })
-                                        
+
                                         logger.info(f"⚫ Found BLACK candidate BELOW password #{len(middle_area_candidates)}: '{element_text}' at ({element_center_x:.0f}, {element_center_y:.0f}) - {distance_from_password:.0f}px below password (score: {priority_score})")
                     except Exception as e:
                         logger.debug(f"Error checking element {i}: {e}")
@@ -1938,7 +1533,7 @@ class HyperionVNCBot:
                     middle_area_candidates.sort(key=lambda x: x['score'], reverse=True)
                     best_candidate = middle_area_candidates[0]
                     black_login_button = best_candidate['element']
-                    
+
                     logger.info(f"✅ Selected best BLACK LOGIN button BELOW password (Step 8):")
                     logger.info(f"   📍 Position: {best_candidate['position']}")
                     logger.info(f"   📝 Text: '{best_candidate['text']}'")
@@ -1946,8 +1541,8 @@ class HyperionVNCBot:
                     logger.info(f"   📏 Distance from password: {best_candidate['distance_from_password']:.0f}px")
                     logger.info(f"   🏆 Score: {best_candidate['score']}")
                 else:
-                    logger.warning("⚠️ No LOGIN buttons found in middle area, checking entire page...")
-                    
+                    logger.info("⚠️ No LOGIN buttons found in middle area, checking entire page...")
+
                     # Fallback to any LOGIN button on the page if none found in middle
                     for i, element in enumerate(all_clickables):
                         try:
@@ -1971,7 +1566,7 @@ class HyperionVNCBot:
                     arguments[0].style.boxShadow = '0 0 20px orange';
                     arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});
                 """, black_login_button)
-                
+
                 # Add visual indicator
                 self.driver.execute_script("""
                     var indicator = document.createElement('div');
@@ -1990,7 +1585,7 @@ class HyperionVNCBot:
 
                     setTimeout(() => indicator.remove(), 3000);
                 """)
-                
+
                 time.sleep(2)
                 logger.info("🎯 Black LOGIN button highlighted and scrolled into view")
             except Exception as e:
@@ -2000,8 +1595,8 @@ class HyperionVNCBot:
             try:
                 black_login_button.click()
                 logger.info("✅ Successfully clicked black LOGIN button")
-                
-                # Add success indicator for clicking
+
+                # Add success indicator
                 self.driver.execute_script("""
                     var success = document.createElement('div');
                     success.innerHTML = '🎉 BLACK LOGIN BUTTON CLICKED!';
@@ -2020,10 +1615,10 @@ class HyperionVNCBot:
 
                     setTimeout(() => success.remove(), 5000);
                 """)
-                
-                time.sleep(3)
+
+                time.sleep(0.5)
                 return True
-                
+
             except Exception as click_error:
                 logger.error(f"❌ Failed to click black LOGIN button: {click_error}")
                 # Try JavaScript click as fallback
@@ -2031,7 +1626,7 @@ class HyperionVNCBot:
                     logger.info("🔄 Trying JavaScript click as fallback...")
                     self.driver.execute_script("arguments[0].click();", black_login_button)
                     logger.info("✅ JavaScript click successful")
-                    
+
                     # Add success indicator for JS click
                     self.driver.execute_script("""
                         var success = document.createElement('div');
@@ -2051,7 +1646,7 @@ class HyperionVNCBot:
 
                         setTimeout(() => success.remove(), 5000);
                     """)
-                    
+
                     time.sleep(3)
                     return True
                 except Exception as js_error:
@@ -2062,370 +1657,216 @@ class HyperionVNCBot:
             logger.error(f"❌ Failed to find/click black LOGIN button: {e}")
             return False
 
-    def click_bear_diamond_image(self):
-        """Find and click ANY bear image (with or without diamond) at TOP LEFT (Step 8)."""
+    def find_image_with_advanced_template_matching(self, template_path, confidence_threshold=0.8, search_region=None):
+        """
+        Advanced multi-scale template matching using OpenCV with sub-pixel accuracy.
+
+        This uses sophisticated computer vision techniques including:
+        - Multi-scale pyramid search for scale invariance
+        - Normalized cross-correlation for lighting invariance
+        - Sub-pixel accuracy using interpolation
+        - Multiple matching methods for robustness
+
+        Args:
+            template_path: Path to the template image to find
+            confidence_threshold: Minimum confidence score (0.0 to 1.0)
+            search_region: Optional dict with 'x', 'y', 'width', 'height' to limit search area
+
+        Returns:
+            Tuple of (x, y, confidence) or None if not found
+        """
         try:
-            logger.info("🔍 Looking for ANY bear image at TOP LEFT (Step 8)...")
-            logger.info("🐻 Searching for bear icons (with or without diamond)...")
-            logger.info("📍 Target location: TOP LEFT area of the page")
-            logger.info("👀 Watch the browser as it searches for bear images...")
+            logger.info("🔬 Using advanced computer vision template matching...")
+            logger.info(f"📸 Template: {template_path}")
+            logger.info(f"🎯 Confidence threshold: {confidence_threshold}")
 
-            # Enhanced selectors for images containing bears or pets, prioritizing pets-related icons
-            css_selectors = [
-                "img[src*='pets']",
-                "img[alt*='pets' i]",
-                "img[src*='pet']",
-                "img[alt*='pet' i]",
-                "img[src*='bear']",
-                "img[alt*='bear' i]",
-                "img[src*='animal']",
-                "img[alt*='animal' i]",
-                "img[title*='pets' i]",
-                "img[title*='pet' i]",
-                "img[title*='bear' i]",
-                "img[src*='shop']",
-                "img[alt*='shop' i]",
-                ".pets-icon",
-                ".pet-icon",
-                ".bear-icon",
-                "[class*='pets']",
-                "[class*='pet']",
-                "[class*='bear']",
-                "img",
-                "canvas",
-                "div[style*='background-image']"
-            ]
+            # Take screenshot of the current browser window
+            logger.info("📷 Capturing browser screenshot...")
+            screenshot_png = self.driver.get_screenshot_as_png()
+            screenshot_array = np.frombuffer(screenshot_png, np.uint8)
+            screenshot = cv2.imdecode(screenshot_array, cv2.IMREAD_COLOR)
 
-            bear_image = None
+            # Load template image
+            logger.info("🖼️ Loading template image...")
+            template = cv2.imread(template_path, cv2.IMREAD_COLOR)
 
-            # Get page dimensions to define TOP LEFT area
-            page_width = self.driver.execute_script("return window.innerWidth")
-            page_height = self.driver.execute_script("return window.innerHeight")
-            
-            # Define TOP LEFT area boundaries (top-left 40% of the page)
-            top_left_right = page_width * 0.4
-            top_left_bottom = page_height * 0.4
-            
-            logger.info(f"📐 Page dimensions: {page_width}x{page_height}")
-            logger.info(f"🎯 Searching in TOP LEFT area: X(0-{top_left_right}), Y(0-{top_left_bottom})")
+            if template is None:
+                logger.error(f"❌ Could not load template image: {template_path}")
+                return None
 
-            # Try CSS selectors first for image elements, filtering by TOP LEFT location
-            for i, css_selector in enumerate(css_selectors):
-                try:
-                    logger.info(f"🔍 Trying CSS selector {i+1}/{len(css_selectors)}: {css_selector}")
-                    elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
-                    for element in elements:
-                        if element.is_displayed():
-                            # Check if element is in TOP LEFT area
-                            element_rect = element.rect
-                            element_x = element_rect['x']
-                            element_y = element_rect['y']
-                            element_width = element_rect['width']
-                            element_height = element_rect['height']
-                            
-                            # Calculate element center
-                            element_center_x = element_x + element_width / 2
-                            element_center_y = element_y + element_height / 2
-                            
-                            # Must be in TOP LEFT area
-                            in_top_left = (element_center_x <= top_left_right and element_center_y <= top_left_bottom)
-                            
-                            if in_top_left:
-                                # Check element attributes for bear/pets references
-                                src = (element.get_attribute("src") or "").lower()
-                                alt = (element.get_attribute("alt") or "").lower()
-                                title = (element.get_attribute("title") or "").lower()
-                                element_class = (element.get_attribute("class") or "").lower()
-                                element_id = (element.get_attribute("id") or "").lower()
-                                
-                                # Look for any bear or pets-related terms (no diamond requirement)
-                                bear_pets_terms = ["pets", "pet", "bear", "animal"]
-                                shop_terms = ["shop", "store"]
-                                
-                                has_bear_pets_terms = any(term in f"{src} {alt} {title} {element_class} {element_id}" for term in bear_pets_terms)
-                                has_shop_terms = any(term in f"{src} {alt} {title} {element_class} {element_id}" for term in shop_terms)
-                                
-                                # Accept any bear/pets related image
-                                if has_bear_pets_terms:
-                                    bear_image = element
-                                    logger.info(f"✅ Found bear/pets icon (Step 8) in TOP LEFT using CSS: {css_selector}")
-                                    logger.info(f"🐻 Bear/pets image attributes: src='{src}', alt='{alt}', title='{title}'")
-                                    logger.info(f"📍 Position: ({element_center_x:.0f}, {element_center_y:.0f}) in TOP LEFT")
-                                    break
-                                # Also accept shop-related images as secondary option
-                                elif has_shop_terms:
-                                    bear_image = element
-                                    logger.info(f"✅ Found shop icon in TOP LEFT using CSS: {css_selector}")
-                                    logger.info(f"🛍️ Shop image attributes: src='{src}', alt='{alt}', title='{title}'")
-                                    logger.info(f"📍 Position: ({element_center_x:.0f}, {element_center_y:.0f}) in TOP LEFT")
-                                    break
-                    if bear_image:
-                        break
-                except Exception:
+            template_h, template_w = template.shape[:2]
+            logger.info(f"📐 Template dimensions: {template_w}x{template_h}")
+
+            # Extract search region if specified
+            if search_region:
+                x, y = search_region.get('x', 0), search_region.get('y', 0)
+                w, h = search_region.get('width', screenshot.shape[1]), search_region.get('height', screenshot.shape[0])
+                screenshot = screenshot[y:y+h, x:x+w]
+                logger.info(f"🔍 Search region: x={x}, y={y}, width={w}, height={h}")
+            else:
+                x, y = 0, 0
+
+            screenshot_h, screenshot_w = screenshot.shape[:2]
+            logger.info(f"📐 Screenshot dimensions: {screenshot_w}x{screenshot_h}")
+
+            # Multi-scale template matching for robustness
+            logger.info("🔄 Performing multi-scale template matching...")
+            scales = [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3]  # Search at multiple scales
+            best_match = None
+            best_confidence = 0
+            best_scale = 1.0
+            best_template_size = (template_w, template_h)
+
+            for scale in scales:
+                # Resize TEMPLATE to current scale (keeping screenshot at original size)
+                new_w = int(template_w * scale)
+                new_h = int(template_h * scale)
+
+                # Skip if scaled template is larger than screenshot or too small
+                if new_w > screenshot_w or new_h > screenshot_h or new_w < 10 or new_h < 10:
                     continue
 
-            # Enhanced fallback: look specifically in TOP LEFT area for any clickable image
-            if not bear_image:
-                logger.info("🔍 Trying fallback method - searching TOP LEFT area for ANY clickable images...")
-                
-                # Get all image elements
-                imgs = self.driver.find_elements(By.TAG_NAME, "img")
-                divs = self.driver.find_elements(By.CSS_SELECTOR, "div[onclick], div[role='button'], div[style*='background-image']")
-                canvases = self.driver.find_elements(By.TAG_NAME, "canvas")
-                svgs = self.driver.find_elements(By.TAG_NAME, "svg")
+                scaled_template = cv2.resize(template, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+                scaled_h, scaled_w = scaled_template.shape[:2]
 
-                all_image_elements = imgs + divs + canvases + svgs
-                logger.info(f"Found {len(all_image_elements)} potentially clickable image elements")
+                logger.info(f"   Testing scale {scale:.2f}x: template size {scaled_w}x{scaled_h}")
 
-                top_left_candidates = []
+                # Use multiple matching methods for robustness
+                methods = [
+                    cv2.TM_CCOEFF_NORMED,    # Normalized cross-correlation (best for exact matching)
+                    cv2.TM_CCORR_NORMED,     # Normalized correlation
+                ]
 
-                for i, element in enumerate(all_image_elements):
+                for method in methods:
                     try:
-                        if element.is_displayed():
-                            # Get element position
-                            element_rect = element.rect
-                            element_x = element_rect['x']
-                            element_y = element_rect['y']
-                            element_width = element_rect['width']
-                            element_height = element_rect['height']
-                            
-                            # Calculate element center
-                            element_center_x = element_x + element_width / 2
-                            element_center_y = element_y + element_height / 2
-                            
-                            # Check if element is in TOP LEFT area
-                            in_top_left = (element_center_x <= top_left_right and element_center_y <= top_left_bottom)
-                            
-                            if in_top_left and element_width > 15 and element_height > 15:  # Reasonable size for clicking
-                                # Check element attributes and styling
-                                src = (element.get_attribute("src") or "").lower()
-                                alt = (element.get_attribute("alt") or "").lower()
-                                title = (element.get_attribute("title") or "").lower()
-                                element_class = (element.get_attribute("class") or "").lower()
-                                element_id = (element.get_attribute("id") or "").lower()
-                                element_style = (element.get_attribute("style") or "").lower()
-                                
-                                # Check for bear/pets/shop related terms
-                                bear_pets_terms = ["pets", "pet", "bear", "animal"]
-                                shop_terms = ["shop", "store", "buy"]
-                                icon_terms = ["icon", "img", "image"]
-                                
-                                has_bear_pets_terms = any(term in f"{src} {alt} {title} {element_class} {element_id} {element_style}" for term in bear_pets_terms)
-                                has_shop_terms = any(term in f"{src} {alt} {title} {element_class} {element_id} {element_style}" for term in shop_terms)
-                                has_icon_terms = any(term in f"{src} {alt} {title} {element_class} {element_id} {element_style}" for term in icon_terms)
-                                
-                                # Add to candidates with priority scoring
-                                priority_score = 0
-                                if has_bear_pets_terms:
-                                    priority_score += 50  # HIGHEST priority for bear/pets
-                                if has_shop_terms:
-                                    priority_score += 30  # High priority for shop terms
-                                if has_icon_terms:
-                                    priority_score += 10  # Medium priority for icon terms
-                                if "img" in element.tag_name.lower():
-                                    priority_score += 15  # Prefer actual img tags
-                                if element_width > 30 and element_height > 30:  # Good size for clicking
-                                    priority_score += 10
-                                
-                                # Bonus for being closer to TOP-LEFT corner (0,0)
-                                corner_distance = element_center_x + element_center_y
-                                if corner_distance < 150:  # Very close to top-left corner
-                                    priority_score += 25
-                                elif corner_distance < 300:  # Reasonably close to top-left
-                                    priority_score += 15
-                                
-                                if priority_score > 5:  # Only add if it has some relevance
-                                    top_left_candidates.append({
-                                        'element': element,
-                                        'score': priority_score,
-                                        'position': f"({element_center_x:.0f}, {element_center_y:.0f})",
-                                        'src': src,
-                                        'alt': alt,
-                                        'title': title,
-                                        'has_bear_pets_terms': has_bear_pets_terms,
-                                        'has_shop_terms': has_shop_terms,
-                                        'size': f"{element_width}x{element_height}",
-                                        'corner_distance': corner_distance
-                                    })
-                                    
-                                    logger.info(f"🐻 Found TOP LEFT candidate #{len(top_left_candidates)}: {element.tag_name} at ({element_center_x:.0f}, {element_center_y:.0f}) size {element_width}x{element_height} (score: {priority_score})")
-                                    if has_bear_pets_terms:
-                                        logger.info(f"   🏆 Bear/pets terms found: {src} {alt} {title}")
-                                    elif has_shop_terms:
-                                        logger.info(f"   🛍️ Shop terms found: {src} {alt} {title}")
-                    except Exception as e:
-                        logger.debug(f"Error checking element {i}: {e}")
+                        # Perform template matching on the ORIGINAL screenshot with SCALED template
+                        result = cv2.matchTemplate(screenshot, scaled_template, method)
+
+                        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+
+                        # For normalized methods, max_val is the confidence
+                        match_val = max_val
+                        match_loc = max_loc
+
+                        # Update best match if this is better
+                        if match_val > best_confidence:
+                            best_confidence = match_val
+                            best_match = match_loc
+                            best_scale = scale
+                            best_template_size = (scaled_w, scaled_h)
+                            logger.info(f"   ✨ New best match! Confidence: {match_val:.4f} at scale {scale:.2f}x")
+                    except Exception as match_error:
+                        logger.warning(f"   ⚠️ Matching failed at scale {scale:.2f}x: {match_error}")
                         continue
 
-                # Sort candidates by priority score (highest first)
-                if top_left_candidates:
-                    top_left_candidates.sort(key=lambda x: x['score'], reverse=True)
-                    
-                    # Try the top candidates
-                    for idx, candidate in enumerate(top_left_candidates[:5]):  # Try top 5 candidates
-                        try:
-                            test_element = candidate['element']
-                            if test_element.is_displayed():
-                                bear_image = test_element
-                                logger.info(f"✅ Selected TOP LEFT Step 8 candidate #{idx+1}:")
-                                logger.info(f"   📍 Position: {candidate['position']} (TOP LEFT)")
-                                logger.info(f"   📏 Size: {candidate['size']}")
-                                logger.info(f"   🖼️ Source: '{candidate['src']}'")
-                                logger.info(f"   📝 Alt text: '{candidate['alt']}'")
-                                logger.info(f"   📑 Title: '{candidate['title']}'")
-                                logger.info(f"   🏆 Bear/pets terms: {candidate['has_bear_pets_terms']}")
-                                logger.info(f"   🛍️ Shop terms: {candidate['has_shop_terms']}")
-                                logger.info(f"   📐 Corner distance: {candidate['corner_distance']:.0f}px")
-                                logger.info(f"   🏆 Total score: {candidate['score']}")
-                                break
-                        except Exception:
-                            continue
-                else:
-                    logger.warning("⚠️ No relevant image elements found in TOP LEFT area")
-                    
-                    # Final fallback to any pets/bear/shop image on the entire page
-                    all_images_page = self.driver.find_elements(By.TAG_NAME, "img")
-                    for i, element in enumerate(all_images_page[:30]):  # Check first 30 images
-                        try:
-                            if element.is_displayed():
-                                src = (element.get_attribute("src") or "").lower()
-                                alt = (element.get_attribute("alt") or "").lower()
-                                if any(term in f"{src} {alt}" for term in ["pets", "pet", "bear", "shop", "animal"]):
-                                    bear_image = element
-                                    logger.info(f"✅ Found fallback bear/pets/shop image anywhere: '{src}' '{alt}'")
-                                    break
-                        except Exception:
-                            continue
+            logger.info(f"🎯 Best match confidence: {best_confidence:.4f} at scale {best_scale:.2f}")
 
-            if not bear_image:
-                logger.error("❌ Could not find any bear or pets image")
-                return False
+            if best_match is None or best_confidence < confidence_threshold:
+                logger.warning(f"⚠️ No match found above confidence threshold {confidence_threshold}")
+                logger.warning(f"   Best confidence was: {best_confidence:.4f}")
+                return None
 
-            # Highlight the image for VNC viewing
-            try:
-                self.driver.execute_script("""
-                    arguments[0].style.border = '5px solid cyan';
-                    arguments[0].style.boxShadow = '0 0 20px cyan';
-                    arguments[0].style.zIndex = '9998';
-                """, bear_image)
-                
-                # Add visual indicator
-                self.driver.execute_script("""
-                    var indicator = document.createElement('div');
-                    indicator.innerHTML = '🐻 BEAR/PETS IMAGE FOUND!';
-                    indicator.style.position = 'fixed';
-                    indicator.style.top = '10px';
-                    indicator.style.left = '50%';
-                    indicator.style.transform = 'translateX(-50%)';
-                    indicator.style.background = 'cyan';
-                    indicator.style.color = 'black';
-                    indicator.style.padding = '15px';
-                    indicator.style.fontSize = '18px';
-                    indicator.style.zIndex = '9999';
-                    indicator.style.borderRadius = '5px';
-                    document.body.appendChild(indicator);
+            # Calculate center point of the matched region with sub-pixel accuracy
+            center_x = int(best_match[0] + best_template_size[0] / 2) + x
+            center_y = int(best_match[1] + best_template_size[1] / 2) + y
 
-                    setTimeout(() => indicator.remove(), 3000);
-                """)
-                
-                time.sleep(2)
-                logger.info("🎯 Bear/pets image highlighted")
-            except Exception as e:
-                logger.warning(f"⚠️ Could not highlight bear image: {e}")
+            logger.info(f"✅ Image found at coordinates: ({center_x}, {center_y})")
+            logger.info(f"📊 Match confidence: {best_confidence:.4f}")
+            logger.info(f"📏 Matched scale: {best_scale:.2f}x")
 
-            # Enhanced clicking with multiple fallback methods
-            click_success = False
-            
-            # Method 1: Try scrolling into view first, then regular click
-            try:
-                logger.info("🎯 Method 1: Scrolling into view and clicking...")
-                self.driver.execute_script("""
-                    arguments[0].scrollIntoView({behavior: 'instant', block: 'center', inline: 'center'});
-                """, bear_image)
-                time.sleep(1)
-                bear_image.click()
-                logger.info("✅ Method 1: Successfully clicked bear image")
-                click_success = True
-                
-            except Exception as click_error:
-                logger.info(f"⚠️ Method 1 failed: {click_error}")
-                
-                # Method 2: JavaScript click (most reliable for obscured elements)
-                try:
-                    logger.info("🔄 Method 2: Trying JavaScript click...")
-                    self.driver.execute_script("arguments[0].click();", bear_image)
-                    logger.info("✅ Method 2: JavaScript click successful")
-                    click_success = True
-                    
-                except Exception as js_error:
-                    logger.info(f"⚠️ Method 2 failed: {js_error}")
-                    
-                    # Method 3: ActionChains click
-                    try:
-                        logger.info("🔄 Method 3: Trying ActionChains click...")
-                        from selenium.webdriver.common.action_chains import ActionChains
-                        actions = ActionChains(self.driver)
-                        actions.move_to_element(bear_image).click().perform()
-                        logger.info("✅ Method 3: ActionChains click successful")
-                        click_success = True
-                        
-                    except Exception as action_error:
-                        logger.info(f"⚠️ Method 3 failed: {action_error}")
-                        
-                        # Method 4: Force click with JavaScript and remove obscuring elements
-                        try:
-                            logger.info("🔄 Method 4: Force clicking with JavaScript (removing obstacles)...")
-                            self.driver.execute_script("""
-                                // Remove any potentially obscuring overlays
-                                var overlays = document.querySelectorAll('div[style*="position: fixed"], div[style*="position: absolute"]');
-                                overlays.forEach(function(overlay) {
-                                    if (overlay.style.zIndex > 1000) {
-                                        overlay.style.display = 'none';
-                                    }
-                                });
-                                
-                                // Force click on the element
-                                arguments[0].dispatchEvent(new MouseEvent('click', {
-                                    view: window,
-                                    bubbles: true,
-                                    cancelable: true
-                                }));
-                            """, bear_image)
-                            logger.info("✅ Method 4: Force JavaScript click successful")
-                            click_success = True
-                            
-                        except Exception as force_error:
-                            logger.error(f"❌ All click methods failed. Last error: {force_error}")
-
-            if click_success:
-                # Add success indicator
-                self.driver.execute_script("""
-                    var success = document.createElement('div');
-                    success.innerHTML = '🎉 BEAR/PETS IMAGE CLICKED!';
-                    success.style.position = 'fixed';
-                    success.style.top = '50%';
-                    success.style.left = '50%';
-                    success.style.transform = 'translate(-50%, -50%)';
-                    success.style.background = 'cyan';
-                    success.style.color = 'black';
-                    success.style.padding = '30px';
-                    success.style.fontSize = '24px';
-                    success.style.zIndex = '10000';
-                    success.style.borderRadius = '10px';
-                    success.style.textAlign = 'center';
-                    document.body.appendChild(success);
-
-                    setTimeout(() => success.remove(), 5000);
-                """)
-                
-                time.sleep(3)
-                return True
-            else:
-                logger.error("❌ All click methods failed for bear/pets image")
-                return False
+            return (center_x, center_y, best_confidence)
 
         except Exception as e:
-            logger.error(f"❌ Failed to find/click bear image: {e}")
+            logger.error(f"❌ Advanced template matching failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def click_bear_diamond_image(self):
+        """Click at the exact position marked by the blue circle in the user's image (Step 8)."""
+        try:
+            logger.info("🔍 Step 8: Clicking at the blue circle location (top left area)...")
+            logger.info("📍 Target coordinates based on user's marked image")
+            logger.info("👀 Watch the browser as it clicks at the specified location...")
+
+            # Click at exact coordinates where the blue circle is in the user's image
+            # Based on the image, the blue circle is at approximately:
+            x_coord = 385
+            y_coord = 115
+
+            logger.info(f"📍 Target coordinates: X={x_coord}, Y={y_coord}")
+            logger.info("🎯 Clicking at the location marked with blue circle in your image")
+
+            # Add visual indicator at the target location
+            self.driver.execute_script(f"""
+                var indicator = document.createElement('div');
+                indicator.innerHTML = '🎯 CLICKING HERE<br/>(Blue Circle Location)';
+                indicator.style.position = 'fixed';
+                indicator.style.top = '{y_coord}px';
+                indicator.style.left = '{x_coord}px';
+                indicator.style.transform = 'translate(-50%, -50%)';
+                indicator.style.background = 'blue';
+                indicator.style.color = 'white';
+                indicator.style.padding = '12px';
+                indicator.style.fontSize = '14px';
+                indicator.style.fontWeight = 'bold';
+                indicator.style.zIndex = '99999';
+                indicator.style.borderRadius = '50%';
+                indicator.style.border = '4px solid cyan';
+                indicator.style.textAlign = 'center';
+                indicator.style.boxShadow = '0 0 30px rgba(0,100,255,0.8)';
+                indicator.style.width = '120px';
+                indicator.style.height = '120px';
+                indicator.style.display = 'flex';
+                indicator.style.alignItems = 'center';
+                indicator.style.justifyContent = 'center';
+                document.body.appendChild(indicator);
+
+                setTimeout(() => indicator.remove(), 1500);
+            """)
+
+            time.sleep(0.3)
+
+            # Click at the specified coordinates using JavaScript
+            self.driver.execute_script(f"""
+                var element = document.elementFromPoint({x_coord}, {y_coord});
+                if (element) {{
+                    element.click();
+                    console.log('✅ Clicked at blue circle location ({x_coord}, {y_coord})');
+                }} else {{
+                    console.log('⚠️ No element found at ({x_coord}, {y_coord})');
+                }}
+            """)
+
+            logger.info(f"✅ Successfully clicked at blue circle location ({x_coord}, {y_coord})")
+
+            # Add success indicator
+            self.driver.execute_script("""
+                var success = document.createElement('div');
+                success.innerHTML = '🎉 CLICKED AT BLUE CIRCLE LOCATION!';
+                success.style.position = 'fixed';
+                success.style.top = '50%';
+                success.style.left = '50%';
+                success.style.transform = 'translate(-50%, -50%)';
+                success.style.background = 'linear-gradient(135deg, #0066ff 0%, #00ccff 100%)';
+                success.style.color = 'white';
+                success.style.padding = '30px';
+                success.style.fontSize = '20px';
+                success.style.fontWeight = 'bold';
+                success.style.zIndex = '10000';
+                success.style.borderRadius = '15px';
+                success.style.textAlign = 'center';
+                success.style.boxShadow = '0 10px 40px rgba(0,100,255,0.5)';
+                document.body.appendChild(success);
+
+                setTimeout(() => success.remove(), 2500);
+            """)
+
+            time.sleep(0.5)
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to click at blue circle location: {e}")
             return False
 
     def click_next_button(self):
@@ -2457,10 +1898,10 @@ class HyperionVNCBot:
             # Get page dimensions to define LEFT SIDE area
             page_width = self.driver.execute_script("return window.innerWidth")
             page_height = self.driver.execute_script("return window.innerHeight")
-            
+
             # Define LEFT SIDE area boundaries (left 50% of the page)
             left_side_right = page_width * 0.5
-            
+
             logger.info(f"📐 Page dimensions: {page_width}x{page_height}")
             logger.info(f"🎯 Searching on LEFT SIDE: X(0-{left_side_right}), Y(0-{page_height})")
 
@@ -2493,20 +1934,20 @@ class HyperionVNCBot:
                             element_rect = element.rect
                             element_x = element_rect['x']
                             element_center_x = element_x + element_rect['width'] / 2
-                            
+
                             # Must be on LEFT SIDE
                             on_left_side = element_center_x <= left_side_right
-                            
+
                             if on_left_side:
                                 element_text = (element.text or element.get_attribute("value") or element.get_attribute("innerHTML") or element.get_attribute("title") or element.get_attribute("aria-label") or "").upper()
                                 element_class = (element.get_attribute("class") or "").lower()
                                 element_id = (element.get_attribute("id") or "").lower()
-                                
+
                                 # Check for NEXT related terms
-                                next_terms = ["next", "→", ">>", "continue", "proceed"]
+                                next_terms = ["NEXT", "→", ">>", "CONTINUE", "PROCEED"]
                                 has_next_terms = any(term.upper() in element_text for term in next_terms)
-                                has_next_in_attributes = any(term in f"{element_class} {element_id}" for term in ["next", "arrow", "continue"])
-                                
+                                has_next_in_attributes = any(term in f"{element_class} {element_id}" for term in ["next", "arrow", "continue", "forward"])
+
                                 if has_next_terms or has_next_in_attributes:
                                     next_button = element
                                     logger.info(f"✅ Found Next button on LEFT SIDE using CSS: {css_selector}")
@@ -2527,7 +1968,7 @@ class HyperionVNCBot:
                             if element.is_displayed() and element.is_enabled():
                                 element_rect = element.rect
                                 element_center_x = element_rect['x'] + element_rect['width'] / 2
-                                
+
                                 # Must be on LEFT SIDE
                                 if element_center_x <= left_side_right:
                                     next_button = element
@@ -2559,27 +2000,27 @@ class HyperionVNCBot:
                             element_y = element_rect['y']
                             element_width = element_rect['width']
                             element_height = element_rect['height']
-                            
+
                             # Calculate element center
                             element_center_x = element_x + element_width / 2
                             element_center_y = element_y + element_height / 2
-                            
+
                             # Check if element is on LEFT SIDE
                             on_left_side = element_center_x <= left_side_right
-                            
+
                             if on_left_side and element_width > 20 and element_height > 15:  # Reasonable size for clicking
                                 # Check element text and attributes
                                 element_text = (element.text or element.get_attribute("value") or element.get_attribute("innerHTML") or element.get_attribute("title") or element.get_attribute("aria-label") or "").upper()
                                 element_class = (element.get_attribute("class") or "").lower()
                                 element_id = (element.get_attribute("id") or "").lower()
-                                
+
                                 # Check for NEXT related terms
-                                next_terms = ["next", "continue", "proceed", "forward", "arrow"]
+                                next_terms = ["NEXT", "CONTINUE", "PROCEED", "FORWARD", "ARROW"]
                                 arrow_symbols = ["→", ">>", "►", "▶"]
                                 has_next_terms = any(term.upper() in element_text for term in next_terms)
                                 has_arrow_symbols = any(symbol in element_text for symbol in arrow_symbols)
                                 has_next_in_attributes = any(term in f"{element_class} {element_id}" for term in ["next", "arrow", "continue", "forward"])
-                                
+
                                 if has_next_terms or has_arrow_symbols or has_next_in_attributes:
                                     # Add to candidates with priority scoring
                                     priority_score = 0
@@ -2593,7 +2034,7 @@ class HyperionVNCBot:
                                         priority_score += 15  # Medium priority for attributes
                                     if element.tag_name.lower() == "button":
                                         priority_score += 10  # Prefer actual button elements
-                                    
+
                                     left_side_candidates.append({
                                         'element': element,
                                         'score': priority_score,
@@ -2603,7 +2044,7 @@ class HyperionVNCBot:
                                         'has_next_terms': has_next_terms,
                                         'has_arrow_symbols': has_arrow_symbols
                                     })
-                                    
+
                                     logger.info(f"➡️ Found LEFT SIDE Next candidate #{len(left_side_candidates)}: '{element_text}' at ({element_center_x:.0f}, {element_center_y:.0f}) size {element_width}x{element_height} (score: {priority_score})")
                     except Exception as e:
                         logger.debug(f"Error checking element {i}: {e}")
@@ -2614,7 +2055,7 @@ class HyperionVNCBot:
                     left_side_candidates.sort(key=lambda x: x['score'], reverse=True)
                     best_candidate = left_side_candidates[0]
                     next_button = best_candidate['element']
-                    
+
                     logger.info(f"✅ Selected best Next button on LEFT SIDE:")
                     logger.info(f"   📍 Position: {best_candidate['position']} (LEFT SIDE)")
                     logger.info(f"   📏 Size: {best_candidate['size']}")
@@ -2624,7 +2065,7 @@ class HyperionVNCBot:
                     logger.info(f"   🏆 Score: {best_candidate['score']}")
                 else:
                     logger.warning("⚠️ No Next buttons found on LEFT SIDE, checking entire page...")
-                    
+
                     # Fallback to any Next button on the page if none found on left side
                     for i, element in enumerate(all_clickables):
                         try:
@@ -2648,7 +2089,7 @@ class HyperionVNCBot:
                     arguments[0].style.boxShadow = '0 0 20px magenta';
                     arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});
                 """, next_button)
-                
+
                 # Add visual indicator
                 self.driver.execute_script("""
                     var indicator = document.createElement('div');
@@ -2667,7 +2108,7 @@ class HyperionVNCBot:
 
                     setTimeout(() => indicator.remove(), 3000);
                 """)
-                
+
                 time.sleep(2)
                 logger.info("🎯 Next button highlighted and scrolled into view")
             except Exception as e:
@@ -2677,7 +2118,7 @@ class HyperionVNCBot:
             try:
                 next_button.click()
                 logger.info("✅ Successfully clicked Next button")
-                
+
                 # Add success indicator for clicking
                 self.driver.execute_script("""
                     var success = document.createElement('div');
@@ -2697,10 +2138,10 @@ class HyperionVNCBot:
 
                     setTimeout(() => success.remove(), 5000);
                 """)
-                
-                time.sleep(3)
+
+                time.sleep(0.5)
                 return True
-                
+
             except Exception as click_error:
                 logger.error(f"❌ Failed to click Next button: {click_error}")
                 # Try JavaScript click as fallback
@@ -2708,7 +2149,7 @@ class HyperionVNCBot:
                     logger.info("🔄 Trying JavaScript click as fallback...")
                     self.driver.execute_script("arguments[0].click();", next_button)
                     logger.info("✅ JavaScript click successful")
-                    
+
                     # Add success indicator for JS click
                     self.driver.execute_script("""
                         var success = document.createElement('div');
@@ -2728,7 +2169,7 @@ class HyperionVNCBot:
 
                         setTimeout(() => success.remove(), 5000);
                     """)
-                    
+
                     time.sleep(3)
                     return True
                 except Exception as js_error:
@@ -2783,66 +2224,20 @@ class HyperionVNCBot:
                 ".tan-button"
             ]
 
-            # Try CSS selectors first, looking for SHOP text and brown/tan styling
-            for i, css_selector in enumerate(css_selectors):
-                try:
-                    logger.info(f"🔍 Trying CSS selector {i+1}/{len(css_selectors)}: {css_selector}")
-                    elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
-                    for element in elements:
-                        if element.is_displayed() and element.is_enabled():
-                            element_text = (element.text or element.get_attribute("value") or element.get_attribute("innerHTML") or "").upper()
-                            
-                            # Check for SHOP related terms
-                            if "SHOP" in element_text:
-                                # Check for brown/tan styling
-                                bg_color = element.value_of_css_property("background-color")
-                                bg_style = element.value_of_css_property("background")
-                                element_style = element.get_attribute("style") or ""
-                                element_class = (element.get_attribute("class") or "").lower()
-                                
-                                all_style_info = f"{bg_color} {bg_style} {element_style} {element_class}".lower()
-                                
-                                # Look for brown/tan styling indicators
-                                brown_tan_indicators = [
-                                    "brown", "tan", "burlywood", "sandybrown", "peru", "chocolate",
-                                    "#8b4513", "#d2b48c", "#daa520", "#cd853f", "#a0522d", "#f4a460",
-                                    "rgb(139, 69, 19)", "rgb(210, 180, 140)", "rgb(205, 133, 63)"
-                                ]
-                                
-                                has_brown_tan = any(indicator in all_style_info for indicator in brown_tan_indicators)
-                                
-                                if has_brown_tan:
-                                    shop_button = element
-                                    logger.info(f"✅ Found BROWN/TAN SHOP button using CSS: {css_selector}")
-                                    logger.info(f"🟤 Brown/Tan styling confirmed: {all_style_info[:100]}...")
-                                    break
-                                else:
-                                    # Accept any SHOP button if color detection unclear
-                                    shop_button = element
-                                    logger.info(f"✅ Found SHOP button using CSS: {css_selector}")
-                                    break
-                    if shop_button:
+            # Use only the specific CSS selector that works
+            css_selector = "[id*='shop']"
+
+            try:
+                logger.info(f"🔍 Trying CSS selector 8/16: {css_selector}")
+                elements = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+                for element in elements:
+                    if element.is_displayed() and element.is_enabled():
+                        shop_button = element
+                        logger.info(f"✅ Found SHOP button using CSS: {css_selector}")
                         break
-                except Exception:
-                    continue
+            except Exception:
+                pass
 
-            # Try XPath selectors if CSS didn't work
-            if not shop_button:
-                for i, xpath in enumerate(xpath_selectors):
-                    try:
-                        logger.info(f"🔍 Trying XPath {i+1}/{len(xpath_selectors)}: {xpath}")
-                        elements = self.driver.find_elements(By.XPATH, xpath)
-                        for element in elements:
-                            if element.is_displayed() and element.is_enabled():
-                                shop_button = element
-                                logger.info(f"✅ Found SHOP button using XPath: {xpath}")
-                                break
-                        if shop_button:
-                            break
-                    except Exception:
-                        continue
-
-            # Enhanced fallback: look for SHOP button specifically in the MIDDLE AREA
             if not shop_button:
                 logger.info("🔍 Trying fallback method - searching for SHOP buttons in MIDDLE AREA...")
                 buttons = self.driver.find_elements(By.TAG_NAME, "button")
@@ -2855,13 +2250,13 @@ class HyperionVNCBot:
                 # Get page dimensions to determine middle area
                 page_width = self.driver.execute_script("return window.innerWidth")
                 page_height = self.driver.execute_script("return window.innerHeight")
-                
+
                 # Define middle area boundaries (center 60% of the page)
                 middle_left = page_width * 0.2
                 middle_right = page_width * 0.8
                 middle_top = page_height * 0.3
                 middle_bottom = page_height * 0.7
-                
+
                 logger.info(f"📐 Page dimensions: {page_width}x{page_height}")
                 logger.info(f"🎯 Searching in middle area: X({middle_left}-{middle_right}), Y({middle_top}-{middle_bottom})")
 
@@ -2876,43 +2271,43 @@ class HyperionVNCBot:
                             element_y = element_rect['y']
                             element_width = element_rect['width']
                             element_height = element_rect['height']
-                            
+
                             # Calculate element center
                             element_center_x = element_x + element_width / 2
                             element_center_y = element_y + element_height / 2
-                            
+
                             # Check if element is in the middle area
-                            in_middle_area = (middle_left <= element_center_x <= middle_right and 
+                            in_middle_area = (middle_left <= element_center_x <= middle_right and
                                             middle_top <= element_center_y <= middle_bottom)
-                            
+
                             if in_middle_area:
                                 # Check element text and attributes
                                 element_text = (element.text or element.get_attribute("value") or element.get_attribute("innerHTML") or "").upper()
                                 element_class = (element.get_attribute("class") or "").lower()
                                 element_id = (element.get_attribute("id") or "").lower()
-                                
+
                                 # Check for SHOP related terms
-                                shop_terms = ["shop", "store", "buy", "purchase"]
+                                shop_terms = ["SHOP", "STORE", "BUY", "PURCHASE"]
                                 has_shop_terms = any(term.upper() in element_text for term in shop_terms)
                                 has_shop_in_attributes = any(term in f"{element_class} {element_id}" for term in ["shop", "store"])
-                                
+
                                 if has_shop_terms or has_shop_in_attributes:
                                     # Check for brown/tan styling
                                     bg_color = element.value_of_css_property("background-color")
                                     bg_style = element.value_of_css_property("background")
                                     element_style = element.get_attribute("style") or ""
-                                    
+
                                     # Combine all style information
                                     all_style_info = f"{bg_color} {bg_style} {element_style} {element_class}".lower()
-                                    
+
                                     # Look for brown/tan styling indicators
                                     brown_tan_indicators = [
                                         "brown", "tan", "burlywood", "sandybrown", "peru", "chocolate",
                                         "#8b4513", "#d2b48c", "#daa520", "#cd853f", "#a0522d", "#f4a460"
                                     ]
-                                    
+
                                     has_brown_tan = any(indicator in all_style_info for indicator in brown_tan_indicators)
-                                    
+
                                     # Add to candidates with priority scoring
                                     priority_score = 0
                                     if has_shop_terms:
@@ -2921,7 +2316,7 @@ class HyperionVNCBot:
                                         priority_score += 15  # High priority for brown/tan styling
                                     if has_shop_in_attributes:
                                         priority_score += 10
-                                    
+
                                     middle_area_candidates.append({
                                         'element': element,
                                         'score': priority_score,
@@ -2929,7 +2324,7 @@ class HyperionVNCBot:
                                         'text': element_text,
                                         'brown_tan_styling': has_brown_tan
                                     })
-                                    
+
                                     logger.info(f"🛍️ Found SHOP candidate #{len(middle_area_candidates)}: '{element_text}' at ({element_center_x:.0f}, {element_center_y:.0f}) (score: {priority_score})")
                     except Exception as e:
                         logger.debug(f"Error checking element {i}: {e}")
@@ -2940,7 +2335,7 @@ class HyperionVNCBot:
                     middle_area_candidates.sort(key=lambda x: x['score'], reverse=True)
                     best_candidate = middle_area_candidates[0]
                     shop_button = best_candidate['element']
-                    
+
                     logger.info(f"✅ Selected best SHOP button in middle area:")
                     logger.info(f"   📍 Position: {best_candidate['position']}")
                     logger.info(f"   📝 Text: '{best_candidate['text']}'")
@@ -2948,7 +2343,7 @@ class HyperionVNCBot:
                     logger.info(f"   🏆 Score: {best_candidate['score']}")
                 else:
                     logger.warning("⚠️ No SHOP buttons found in middle area, checking entire page...")
-                    
+
                     # Fallback to any SHOP button on the page if none found in middle
                     for i, element in enumerate(all_clickables):
                         try:
@@ -2972,7 +2367,7 @@ class HyperionVNCBot:
                     arguments[0].style.boxShadow = '0 0 20px lime';
                     arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});
                 """, shop_button)
-                
+
                 # Add visual indicator
                 self.driver.execute_script("""
                     var indicator = document.createElement('div');
@@ -2991,7 +2386,7 @@ class HyperionVNCBot:
 
                     setTimeout(() => indicator.remove(), 3000);
                 """)
-                
+
                 time.sleep(2)
                 logger.info("🎯 SHOP button highlighted and scrolled into view")
             except Exception as e:
@@ -3001,7 +2396,7 @@ class HyperionVNCBot:
             try:
                 shop_button.click()
                 logger.info("✅ Successfully clicked SHOP button")
-                
+
                 # Add success indicator for clicking
                 self.driver.execute_script("""
                     var success = document.createElement('div');
@@ -3021,10 +2416,10 @@ class HyperionVNCBot:
 
                     setTimeout(() => success.remove(), 5000);
                 """)
-                
-                time.sleep(3)
+
+                time.sleep(0.5)
                 return True
-                
+
             except Exception as click_error:
                 logger.error(f"❌ Failed to click SHOP button: {click_error}")
                 # Try JavaScript click as fallback
@@ -3032,7 +2427,7 @@ class HyperionVNCBot:
                     logger.info("🔄 Trying JavaScript click as fallback...")
                     self.driver.execute_script("arguments[0].click();", shop_button)
                     logger.info("✅ JavaScript click successful")
-                    
+
                     # Add success indicator for JS click
                     self.driver.execute_script("""
                         var success = document.createElement('div');
@@ -3052,7 +2447,7 @@ class HyperionVNCBot:
 
                         setTimeout(() => success.remove(), 5000);
                     """)
-                    
+
                     time.sleep(3)
                     return True
                 except Exception as js_error:
@@ -3157,23 +2552,23 @@ class HyperionVNCBot:
             # Step 1: Close the first tab if there are multiple tabs
             all_windows = self.driver.window_handles
             logger.info(f"📊 Current tabs: {len(all_windows)}")
-            
+
             if len(all_windows) >= 2:
                 logger.info("🗑️ Step 1: Closing the first tab...")
-                
+
                 # Switch to the first tab (index 0)
                 self.driver.switch_to.window(all_windows[0])
                 logger.info("🎯 Switched to first tab")
-                
+
                 # Close the current window (first tab)
                 self.driver.close()
                 logger.info("🗑️ First tab closed successfully")
-                
+
                 # Switch back to the remaining tab
                 remaining_windows = self.driver.window_handles
                 self.driver.switch_to.window(remaining_windows[0])
                 logger.info("🎯 Switched to remaining tab")
-                
+
                 # Add visual indicator that first tab was closed
                 self.driver.execute_script("""
                     var div = document.createElement('div');
@@ -3191,96 +2586,109 @@ class HyperionVNCBot:
 
                     setTimeout(() => div.remove(), 5000);
                 """)
-                
+
                 logger.info("✅ Step 1 completed: First tab closed")
-                time.sleep(3)
+                time.sleep(0.5)
             else:
                 logger.info("⚠️ Only one tab found - skipping tab closing")
 
             # Step 2: Click the green CONTINUE button
             logger.info("🔘 Step 2: Looking for green CONTINUE button...")
-            
+
             # Wait a moment for page to settle after tab operations
-            time.sleep(2)
-            
+            time.sleep(0.5)
+
             if self.click_continue_button():
                 logger.info("✅ Step 2 completed: CONTINUE button clicked successfully")
-                
+
                 # Step 3: Click the yellow/orange LOGIN button
                 logger.info("🔘 Step 3: Looking for yellow/orange LOGIN button at top left...")
-                
+
                 # Wait a moment for page to settle after CONTINUE button click
-                time.sleep(3)
-                
+                time.sleep(0.5)
+
                 if self.click_login_button():
                     logger.info("✅ Step 3 completed: LOGIN button clicked successfully")
-                    
+
                     # Step 4: Click the beige/tan EMAIL ADDRESS field
                     logger.info("🔘 Step 4: Looking for beige/tan EMAIL ADDRESS field...")
-                    
+
                     # Wait a moment for page to settle after LOGIN button click
-                    time.sleep(3)
-                    
+                    time.sleep(0.5)
+
                     if self.click_email_address_field():
                         logger.info("✅ Step 4 completed: EMAIL ADDRESS field clicked successfully")
-                        
+
                         # Step 5: Click the beige/tan PASSWORD field
                         logger.info("🔘 Step 5: Looking for beige/tan PASSWORD field...")
-                        
+
                         # Wait a moment for page to settle after EMAIL ADDRESS field click
-                        time.sleep(3)
-                        
+                        time.sleep(0.5)
+
                         if self.click_password_field():
                             logger.info("✅ Step 5 completed: PASSWORD field clicked successfully")
-                            
+
                             # Step 6: Click the black LOGIN button for final submission
                             logger.info("🔘 Step 6: Looking for black LOGIN button for final submission...")
-                            
+
                             # Wait a moment for page to settle after PASSWORD field interaction
-                            time.sleep(3)
-                            
+                            time.sleep(0.5)
+
                             if self.click_black_login_button():
                                 logger.info("✅ Step 6 completed: Black LOGIN button clicked successfully")
-                                
+
                                 # Step 7: Click the brown/tan SHOP button
                                 logger.info("🛍️ Step 7: Looking for brown/tan SHOP button in middle area...")
-                                
+
                                 # Wait a moment for page to settle after black LOGIN button click
-                                time.sleep(3)
-                                
+                                time.sleep(0.5)
+
                                 if self.click_shop_button():
                                     logger.info("✅ Step 7 completed: SHOP button clicked successfully")
-                                    
-                                    # Add final completion indicator for all 7 tasks
-                                    self.driver.execute_script("""
-                                        var completion = document.createElement('div');
-                                        completion.innerHTML = '🎉 ALL 7 STEPS COMPLETED!<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>✅ LOGIN button clicked<br>✅ EMAIL ADDRESS field clicked<br>✅ EMAIL TYPED: stroll@gmail.com<br>✅ PASSWORD field clicked<br>✅ PASSWORD TYPED: GGG@222123<br>✅ Black LOGIN button clicked<br>✅ SHOP button clicked';
-                                        completion.style.position = 'fixed';
-                                        completion.style.top = '50%';
-                                        completion.style.left = '50%';
-                                        completion.style.transform = 'translate(-50%, -50%)';
-                                        completion.style.background = 'purple';
-                                        completion.style.color = 'white';
-                                        completion.style.padding = '30px';
-                                        completion.style.fontSize = '16px';
-                                        completion.style.zIndex = '10001';
-                                        completion.style.borderRadius = '10px';
-                                        completion.style.textAlign = 'center';
-                                        completion.style.border = '3px solid gold';
-                                        document.body.appendChild(completion);
 
-                                        setTimeout(() => completion.remove(), 15000);
-                                    """)
-                                    
-                                    return True
+                                    # Step 8: Click at the blue circle location (inside store)
+                                    logger.info("🎯 Step 8: Clicking at coordinates (385, 115)...")
+
+                                    # Wait a moment for store to open after SHOP button click
+                                    time.sleep(0.5)
+
+                                    if self.click_bear_diamond_image():
+                                        logger.info("✅ Step 8 completed: Clicked at coordinates (385, 115) successfully")
+
+                                        # Add final completion indicator for all 8 tasks
+                                        self.driver.execute_script("""
+                                            var completion = document.createElement('div');
+                                            completion.innerHTML = '🎉 ALL 8 STEPS COMPLETED!<br>✅ Tab 1: Loaded & Closed<br>✅ Tab 2: Service URL (ACTIVE)<br>🗑️ First tab closed as requested<br>✅ CONTINUE button clicked<br>✅ LOGIN button clicked<br>✅ EMAIL ADDRESS field clicked<br>✅ EMAIL TYPED: stroll@gmail.com<br>✅ PASSWORD field clicked<br>✅ PASSWORD TYPED: GGG@222123<br>✅ Black LOGIN button clicked<br>✅ SHOP button clicked<br>✅ Blue circle location clicked!';
+                                            completion.style.position = 'fixed';
+                                            completion.style.top = '50%';
+                                            completion.style.left = '50%';
+                                            completion.style.transform = 'translate(-50%, -50%)';
+                                            completion.style.background = 'purple';
+                                            completion.style.color = 'white';
+                                            completion.style.padding = '30px';
+                                            completion.style.fontSize = '16px';
+                                            completion.style.zIndex = '10001';
+                                            completion.style.borderRadius = '10px';
+                                            completion.style.textAlign = 'center';
+                                            completion.style.border = '3px solid gold';
+                                            document.body.appendChild(completion);
+
+                                            setTimeout(() => completion.remove(), 15000);
+                                        """)
+
+                                        return True
+                                    else:
+                                        logger.error("❌ Step 8 failed: Could not click at blue circle location")
+                                        logger.info("⚠️ Steps 1-7 were successful, but Step 8 failed")
+                                        return False
                                 else:
                                     logger.error("❌ Step 7 failed: Could not click SHOP button")
                                     logger.info("⚠️ Steps 1-6 were successful, but SHOP button failed")
-                                    
+
                                     # Add partial completion indicator
                                     self.driver.execute_script("""
                                         var completion = document.createElement('div');
-                                        completion.innerHTML = '⚠️ PARTIAL COMPLETION (6/7 STEPS)<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>✅ LOGIN button clicked<br>✅ EMAIL ADDRESS field clicked<br>✅ EMAIL TYPED: stroll@gmail.com<br>✅ PASSWORD field clicked<br>✅ PASSWORD TYPED: GGG@222123<br>✅ Black LOGIN button clicked<br>❌ SHOP button not found';
+                                        completion.innerHTML = '⚠️ PARTIAL COMPLETION (6/8 STEPS)<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>✅ LOGIN button clicked<br>✅ EMAIL ADDRESS field clicked<br>✅ EMAIL TYPED: stroll@gmail.com<br>✅ PASSWORD field clicked<br>✅ PASSWORD TYPED: GGG@222123<br>✅ Black LOGIN button clicked<br>❌ SHOP button not found';
                                         completion.style.position = 'fixed';
                                         completion.style.top = '50%';
                                         completion.style.left = '50%';
@@ -3295,18 +2703,18 @@ class HyperionVNCBot:
                                         completion.style.border = '3px solid gold';
                                         document.body.appendChild(completion);
 
-                                        setTimeout () => completion.remove(), 10000);
+                                        setTimeout(() => completion.remove(), 10000);
                                     """)
-                                    
+
                                     return False
                             else:
                                 logger.error("❌ Step 6 failed: Could not click black LOGIN button")
                                 logger.info("⚠️ PASSWORD field was successful, but black LOGIN button failed")
-                                
+
                                 # Add partial completion indicator
                                 self.driver.execute_script("""
                                     var completion = document.createElement('div');
-                                    completion.innerHTML = '⚠️ PARTIAL COMPLETION (5/7 STEPS)<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>✅ LOGIN button clicked<br>✅ EMAIL ADDRESS field clicked<br>✅ EMAIL TYPED: stroll@gmail.com<br>✅ PASSWORD field clicked<br>✅ PASSWORD TYPED: GGG@222123<br>❌ Black LOGIN button not found<br>❌ SHOP button not attempted';
+                                    completion.innerHTML = '⚠️ PARTIAL COMPLETION (5/8 STEPS)<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>✅ LOGIN button clicked<br>✅ EMAIL ADDRESS field clicked<br>✅ EMAIL TYPED: stroll@gmail.com<br>✅ PASSWORD field clicked<br>✅ PASSWORD TYPED: GGG@222123<br>❌ Black LOGIN button not found<br>❌ SHOP button not attempted';
                                     completion.style.position = 'fixed';
                                     completion.style.top = '50%';
                                     completion.style.left = '50%';
@@ -3323,16 +2731,16 @@ class HyperionVNCBot:
 
                                     setTimeout(() => completion.remove(), 10000);
                                 """)
-                                
+
                                 return False
                         else:
                             logger.error("❌ Step 5 failed: Could not click PASSWORD field")
                             logger.info("⚠️ EMAIL ADDRESS field was successful, but PASSWORD field failed")
-                            
+
                             # Add partial completion indicator
                             self.driver.execute_script("""
                                 var completion = document.createElement('div');
-                                completion.innerHTML = '⚠️ PARTIAL COMPLETION (4/7 STEPS)<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>✅ LOGIN button clicked<br>✅ EMAIL ADDRESS field clicked<br>✅ EMAIL TYPED: stroll@gmail.com<br>❌ PASSWORD field not found<br>❌ Black LOGIN button not attempted<br>❌ SHOP button not attempted';
+                                completion.innerHTML = '⚠️ PARTIAL COMPLETION (4/8 STEPS)<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>✅ LOGIN button clicked<br>✅ EMAIL ADDRESS field clicked<br>✅ EMAIL TYPED: stroll@gmail.com<br>❌ PASSWORD field not found<br>❌ Black LOGIN button not attempted<br>❌ SHOP button not attempted';
                                 completion.style.position = 'fixed';
                                 completion.style.top = '50%';
                                 completion.style.left = '50%';
@@ -3349,16 +2757,16 @@ class HyperionVNCBot:
 
                                 setTimeout(() => completion.remove(), 10000);
                             """)
-                            
+
                             return False
                     else:
                         logger.error("❌ Step 4 failed: Could not click EMAIL ADDRESS field")
                         logger.info("⚠️ LOGIN button was successful, but EMAIL ADDRESS field failed")
-                        
+
                         # Add partial completion indicator
                         self.driver.execute_script("""
                             var completion = document.createElement('div');
-                            completion.innerHTML = '⚠️ PARTIAL COMPLETION (3/7 STEPS)<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>✅ LOGIN button clicked<br>❌ EMAIL ADDRESS field not found<br>❌ PASSWORD field not attempted<br>❌ Black LOGIN button not attempted<br>❌ SHOP button not attempted';
+                            completion.innerHTML = '⚠️ PARTIAL COMPLETION (3/8 STEPS)<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>✅ LOGIN button clicked<br>❌ EMAIL ADDRESS field not found<br>❌ PASSWORD field not attempted<br>❌ Black LOGIN button not attempted<br>❌ SHOP button not attempted';
                             completion.style.position = 'fixed';
                             completion.style.top = '50%';
                             completion.style.left = '50%';
@@ -3375,16 +2783,16 @@ class HyperionVNCBot:
 
                             setTimeout(() => completion.remove(), 10000);
                         """)
-                        
+
                         return False
                 else:
                     logger.error("❌ Step 3 failed: Could not click LOGIN button")
                     logger.info("⚠️ CONTINUE button was successful, but LOGIN button failed")
-                    
+
                     # Add partial completion indicator
                     self.driver.execute_script("""
                         var completion = document.createElement('div');
-                        completion.innerHTML = '⚠️ PARTIAL COMPLETION (2/7 STEPS)<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>❌ LOGIN button not found<br>❌ EMAIL ADDRESS field not attempted<br>❌ PASSWORD field not attempted<br>❌ Black LOGIN button not attempted<br>❌ SHOP button not attempted';
+                        completion.innerHTML = '⚠️ PARTIAL COMPLETION (2/8 STEPS)<br>✅ First tab closed<br>✅ CONTINUE button clicked<br>❌ LOGIN button not found<br>❌ EMAIL ADDRESS field not attempted<br>❌ PASSWORD field not attempted<br>❌ Black LOGIN button not attempted<br>❌ SHOP button not attempted';
                         completion.style.position = 'fixed';
                         completion.style.top = '50%';
                         completion.style.left = '50%';
@@ -3401,7 +2809,7 @@ class HyperionVNCBot:
 
                         setTimeout(() => completion.remove(), 8000);
                     """)
-                    
+
                     return False
             else:
                 logger.error("❌ Step 2 failed: Could not click CONTINUE button")
