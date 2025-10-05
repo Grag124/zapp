@@ -21,6 +21,10 @@ import websockets
 import aiohttp
 from urllib.parse import urlparse, urljoin
 import re
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.service import Service
+from webdriver_manager.firefox import GeckoDriverManager
 
 # Configure logging
 logging.basicConfig(
@@ -48,31 +52,22 @@ class TamingIOWebSocketBot:
         """Extract the WebSocket URL from the game server."""
         try:
             logger.info(f"🔍 Analyzing server: {self.server_url}")
-            
-            # Create HTTP session with proper headers
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'DNT': '1',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
-            }
-            
-            self.session = aiohttp.ClientSession(headers=headers)
-            
-            # Try to fetch the game page
-            try:
-                async with self.session.get(self.server_url, timeout=10) as response:
-                    if response.status == 200:
-                        html_content = await response.text()
-                        logger.info("✅ Successfully fetched game page")
-                    else:
-                        logger.warning(f"⚠️ HTTP {response.status} - trying direct WebSocket connection")
-                        raise Exception(f"HTTP {response.status}")
-            except Exception as e:
-                logger.info(f"🔄 Direct page fetch failed ({e}), trying common WebSocket endpoints...")
+
+            # Use Selenium to fetch the page
+            firefox_options = Options()
+            firefox_options.add_argument('--headless')
+            firefox_options.add_argument('--no-sandbox')
+            firefox_options.add_argument('--disable-dev-shm-usage')
+            firefox_options.add_argument('--disable-gpu')
+            firefox_options.add_argument('--window-size=1920,1080')
+
+            service = Service(GeckoDriverManager().install())
+            driver = webdriver.Firefox(service=service, options=firefox_options)
+            driver.get(self.server_url)
+            html_content = driver.page_source
+            driver.quit()
+
+            logger.info("✅ Successfully fetched game page with Selenium")
             
             # Try to extract WebSocket URL from HTML if we got the page
             websocket_url = None
@@ -124,7 +119,13 @@ class TamingIOWebSocketBot:
                                 test_url,
                                 extra_headers={
                                     'Origin': self.server_url,
-                                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
+                                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                    'Sec-WebSocket-Version': '13',
+                                    'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
+                                    'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
+                                    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                                    'sec-ch-ua-mobile': '?0',
+                                    'sec-ch-ua-platform': '"Linux"'
                                 }
                             ),
                             timeout=5
