@@ -1,0 +1,38 @@
+run = "python vnc_browser_bot.py"
+modules = ["python-3.11"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Hyperion Bot"
+
+[[workflows.workflow]]
+name = "Working Bot"
+mode = "sequential"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python vnc_browser_bot.py"
+
+[[workflows.workflow]]
+name = "Hyperion Bot"
+mode = "sequential"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python vnc_browser_bot.py"
+
+[[workflows.workflow]]
+name = "Run main.py"
+mode = "sequential"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "/nix/store/cn7gx98bvd6qj3jrh5v21q868nlv2jv6-python3-wrapper/bin/python3 main.py"
+
+[deployment]
+run = ["sh", "-c", "python vnc_browser_bot.py"]
