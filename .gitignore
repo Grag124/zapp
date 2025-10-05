@@ -1,4 +1,5 @@
- Python
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -54,8 +55,3 @@ attached_assets/
 simple_test.png
 taming_io_loaded.png
 taming_io_no_input.png
-screenshots/
-# Ignore all screenshot files
-screenshots/*
-# Keep the screenshots directory
-!screenshots/.gitkeep
