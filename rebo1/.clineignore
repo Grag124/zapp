@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+robot_3d_designer/
+history.md
+build_plan.md
+shopping_list.md
+plan.md

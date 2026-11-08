@@ -1,0 +1,3 @@
+// Placeholder TensorFlow Lite Micro model.
+// Replace with the output of trainer/train_model.py (model.tflite).
+// This file is intentionally empty; the trainer generates a real .tflite.
